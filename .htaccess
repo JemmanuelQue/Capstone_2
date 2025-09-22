@@ -1,0 +1,13 @@
+# Disable directory listing
+Options -Indexes
+
+# Default index files
+DirectoryIndex index.php index.html
+
+# Block access to sensitive files
+<FilesMatch "(^\.env|\.sql$|\.ini$|\.log$|composer\.(json|lock)$|package-lock\.json$)">
+    Require all denied
+</FilesMatch>
+
+# Custom error pages
+ErrorDocument 403 /HRIS/errors/403.php

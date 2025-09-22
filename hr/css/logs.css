@@ -1,0 +1,504 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f5f5f5;
+}
+
+.dropdown-input-group {
+    cursor: pointer;
+}
+.dropdown-input-group:hover {
+    border-color: #80bdff;
+}
+.dropdown-indicator {
+    background-color: #f8f9fa;
+    border-left: 0;
+}
+.dropdown-toggle {
+    border-right: 0;
+}
+.daterangepicker {
+    border: 1px solid #ddd;
+    box-shadow: 0 6px 12px rgba(0,0,0,.175);
+}
+.daterangepicker .ranges li.active {
+    background-color: #0d6efd;
+}
+
+/* Sidebar styles */
+.sidebar {
+    height: 100vh;
+    background-color: #2a7d4f;
+    color: white;
+    position: fixed;
+    transition: width 0.3s ease;
+    width: 220px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar .logo-container {
+    padding: 15px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar .logo {
+    width: 150px;
+    height: 150px;
+    transition: all 0.3s ease;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.sidebar.collapsed .logo {
+    width: 40px;
+    height: 40px;
+}
+
+.sidebar .agency-name {
+    margin-top: 10px;
+    font-weight: bold;
+    text-align: center;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar .agency-name div {
+    font-size: 18px !important;
+    margin-bottom: 4px; 
+}
+
+.sidebar.collapsed .agency-name {
+    opacity: 0;
+    display: none;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.85);
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.sidebar .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.sidebar .nav-link .material-icons,
+.sidebar .nav-link .material-icons-outlined {
+    margin-right: 10px;
+    width: 24px;
+    text-align: center;
+}
+
+.sidebar.collapsed .nav-link {
+    position: relative;
+    justify-content: center;
+    overflow: visible; /* Add this to ensure tooltips can overflow */
+}
+
+.sidebar.collapsed .nav-link span:not(.material-icons):not(.material-icons-outlined) {
+    display: none;
+}
+
+/* Ensure icons remain visible when sidebar is collapsed */
+.sidebar.collapsed .nav-link .material-icons,
+.sidebar.collapsed .nav-link .material-icons-outlined {
+    margin-right: 0;
+}
+
+.activity-logs-title {
+    margin-top: 20px;
+    text-align: center;
+    margin-bottom: 25px;
+    color: #2a7d4f;
+    font-weight: 600;
+    font-size: 28px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.activity-type-section {
+    margin-bottom: 30px;
+}
+
+.activity-type-heading {
+    background-color: #f8f9fa;
+    color: #2a7d4f;
+    padding: 10px 15px;
+    border-left: 4px solid #2a7d4f;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.pagination-container .pagination .page-item.active .page-link {
+    background-color: #2a7d4f;
+    border-color: #2a7d4f;
+}
+
+.pagination-container .pagination .page-link {
+    color: #2a7d4f;
+}
+
+/* Main content styles */
+.main-content {
+    margin-left: 220px;
+    padding: 20px;
+    transition: margin-left 0.3s ease;
+}
+
+.main-content.expanded {
+    margin-left: 60px;
+}
+
+/* Header styles */
+.header {
+    background-color: #fff;
+    padding: 15px 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.toggle-sidebar {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.user-profile img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-left: 10px;
+    object-fit: cover;
+}
+
+/* Dashboard cards */
+.dashboard-card {
+    border-radius: 6px;
+    padding: 0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.2s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+}
+
+.dashboard-card .card-header {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.dashboard-card .card-header .material-icons {
+    margin-right: 10px;
+}
+
+.dashboard-card hr.divider {
+    margin: 0 auto; /* This centers the hr element (0 for top/bottom, auto for left/right) */
+    opacity: 0.3;
+    border-color: white;
+    width: 85%;
+}
+
+.dashboard-card .card-value {
+    font-size: 48px;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 20px;
+    color: white;
+}
+
+.dashboard-card .card-label {
+    font-size: 14px;
+    text-align: center;
+    margin: 10px 15px 20px;
+    color: white;
+}
+
+/* First card (Total Users) background */
+.dashboard-card:first-child {
+    background-color: #28a745;
+}
+
+/* Third card (Attendance Insights) background */
+.dashboard-card:last-child {
+    background-color: #28a745;
+}
+
+/* Modal styles */
+.modal-content {
+    border-radius: 10px;
+    border: none;
+}
+
+.modal-header {
+    background-color: #2a7d4f;
+    color: white;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.modal-footer {
+    border-top: none;
+}
+
+.tooltip .tooltip-inner {
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.tooltip .tooltip-arrow::before {
+    border-right-color: #333;
+}
+
+.current-datetime {
+    font-size: 14px;
+    color: #555;
+    text-align: center;
+}
+
+#current-time {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Mobile Navigation for small screens */
+.mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #2a7d4f;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+    height: 70px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* Hide scrollbar for Chrome, Safari, Opera */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.mobile-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.mobile-nav-container {
+    display: flex;
+    min-width: max-content;
+    height: 100%;
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    padding: 0 20px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.mobile-nav-item.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.mobile-nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-decoration: none;
+}
+
+.mobile-nav-item .material-icons,
+.mobile-nav-item .material-icons-outlined {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.mobile-nav-text {
+    font-size: 12px;
+}
+
+/* Update the responsive styles */
+@media (max-width: 991px) {
+    /* Hide sidebar on mobile */
+    .sidebar {
+        display: none;
+    }
+    
+    /* Show mobile nav on small screens */
+    .mobile-nav {
+        display: block;
+    }
+    
+    /* Main content takes full width */
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding-bottom: 80px; /* Add padding to avoid content being hidden behind mobile nav */
+    }
+    
+    .header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+    }
+
+    .current-datetime {
+        order: 2;
+        width: 100%;
+        margin: 5px 0;
+        font-size: 13px;
+        display: block !important;
+        text-align: center;
+    }
+    
+    .toggle-sidebar {
+        display: none;
+    }
+    
+    #current-date, #current-time {
+        display: inline-block !important; 
+    }
+
+    .dashboard-card .card-value {
+        font-size: 36px;
+    }
+}
+
+/* Additional adjustments for very small screens */
+@media (max-width: 576px) {
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .row {
+        margin-left: -5px;
+        margin-right: -5px;
+    }
+    
+    .col-md-4 {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    
+    h1 {
+        font-size: 24px;
+    }
+    
+    h2 {
+        font-size: 20px;
+    }
+
+    .header {
+        flex-direction: column;
+        padding: 10px;
+    }
+    
+    .current-datetime {
+        font-size: 11px;
+        display: block !important;
+        width: 100%;
+        text-align: center;
+        margin: 5px 0;
+        order: 2;
+    }
+
+    .user-profile {
+        order: 1;
+        margin-bottom: 5px;
+    }
+    
+    .user-profile span {
+        font-size: 15px;
+    }
+    
+    .user-profile img {
+        width: 32px;
+        height: 32px;
+    }
+
+    .dashboard-card .card-value {
+        font-size: 36px;
+    }
+}
+
+/* Add these styles to the bottom of the file */
+.input-group .btn {
+    display: flex;
+    align-items: center;
+}
+
+.input-group .material-icons {
+    font-size: 18px;
+    margin-right: 4px;
+}
+
+@media (max-width: 767px) {
+    .input-group .btn span:not(.material-icons) {
+        display: none;
+    }
+    
+    .input-group .material-icons {
+        margin-right: 0;
+    }
+}
