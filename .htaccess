@@ -10,4 +10,4 @@ DirectoryIndex index.php index.html
 </FilesMatch>
 
 # Custom error pages
-ErrorDocument 403 /HRIS/errors/403.php
+ErrorDocument 403 /errors/403.php
