@@ -100,7 +100,7 @@ function sendPasswordResetEmail($email, $firstName, $otp, $token) {
         $mail->isHTML(true);
         $mail->Subject = 'Password Reset Request - Green Meadows Security Agency';
         
-        $verifyUrl = "http://" . $_SERVER['HTTP_HOST'] . "/HRIS/verify_otp.php?token=" . $token;
+        $verifyUrl = "http://" . $_SERVER['HTTP_HOST'] . "verify_otp.php?token=" . $token;
         
         $mail->Body = "
         <!DOCTYPE html>
