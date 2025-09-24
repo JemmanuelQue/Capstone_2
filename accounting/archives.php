@@ -58,6 +58,12 @@ if ($filterStatus === 'logged_out') {
     $whereClause .= " AND a.time_out IS NULL";
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Get available locations for filter dropdown
 $locationsQuery = "SELECT DISTINCT gl.location_name 
                    FROM guard_locations gl 
@@ -241,7 +247,7 @@ $archivedAttendanceStmt->execute($params);
             </div>
             <div class="user-profile" id="userProfile" data-bs-toggle="modal" data-bs-target="#profileModal">
                 <span><?php echo $accountingName; ?></span>
-                <img src="<?php echo $profilePic; ?>" alt="User Profile">
+                <a href="profile.php"><img src="<?php echo $profilePic; ?>" alt="User Profile"></a>
             </div>
         </div>
 

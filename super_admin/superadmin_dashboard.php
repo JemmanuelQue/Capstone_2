@@ -15,6 +15,12 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Date range filter logic (same as accounting dashboard)
 $filterYear = $_GET['year'] ?? date('Y');
 $filterMonth = $_GET['month'] ?? '';
@@ -318,8 +324,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
         
         <!-- Dashboard Content -->
         <div class="container-fluid mt-4">
-            <h1 class="mb-4"><center>Welcome Super Admin!</center></h1><br>
-            
             <!-- Date Range Filter Form -->
             <div class="row mb-4">
                 <div class="col-12">
@@ -331,7 +335,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                         <hr class="divider">
                         <form method="GET" class="p-3">
                             <div class="row g-3">
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label for="year" class="form-label">Year</label>
                                     <select name="year" id="year" class="form-select">
                                         <?php for($y = date('Y'); $y >= 2020; $y--): ?>
@@ -341,7 +345,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <?php endfor; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label for="month" class="form-label">Month</label>
                                     <select name="month" id="month" class="form-select">
                                         <option value="">All Months</option>
@@ -352,7 +356,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <?php endfor; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label for="dateRange" class="form-label">Date Range</label>
                                     <select name="dateRange" id="dateRange" class="form-select">
                                         <option value="1-31" <?php echo ($dateRange === '1-31') ? 'selected' : ''; ?>>Full Month</option>
@@ -360,11 +364,11 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <option value="16-31" <?php echo ($dateRange === '16-31') ? 'selected' : ''; ?>>16th to End</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label class="form-label">&nbsp;</label>
-                                    <button type="submit" class="btn btn-primary w-100" id="filterBtn">
+                                    <button type="submit" class="btn btn-primary w-100 d-flex justify-content-center gap-1" id="filterBtn">
                                         <span class="material-icons">search</span>
-                                        Filter Analytics
+                                        Apply Filter
                                     </button>
                                 </div>
                             </div>
@@ -504,10 +508,10 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="text-center mt-4 mb-3">
-                                <a href="payroll.php" class="btn btn-success">
-                                    <span class="material-icons">payments</span> View Full Payroll
+                                <a href="payroll.php" class="btn btn-success d-inline-flex align-items-center justify-content-center gap-1">
+                                    <span class="material-icons">payments</span>
+                                    View Full Payroll
                                 </a>
                             </div>
                         </div>
@@ -638,7 +642,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                     showConfirmButton: false,
                     timer: 4000,
                     timerProgressBar: true,
-                    background: '#d4edda',
+                    background: '#ffffff',
                     color: '#155724'
                 });
             }

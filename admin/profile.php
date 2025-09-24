@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../db_connection.php';
 require_once __DIR__ . '/../includes/session_check.php';
 
-// Allow only Admin (Role_ID = 2); validateSession handles redirects
+// Allow only Accounting (Role_ID = 2); validateSession handles redirects
 if (!validateSession($conn, 2)) {
     exit();
 }

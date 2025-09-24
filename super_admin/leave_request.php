@@ -17,6 +17,12 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
 } else {
     $hrProfile = '../images/default_profile.png';
 }
+
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
 ?>
 
 
@@ -253,19 +259,19 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     <!-- Filter Section -->
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
-            <form id="filterForm" method="GET">
+            <form id="filterForm" class="d-flex justify-content-center" method="GET">
                 <div class="row g-2">
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="start_date" class="form-label">Start Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
                                value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : date('Y-m-01'); ?>">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="end_date" class="form-label">End Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
                                value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : date('Y-m-t'); ?>">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-3">
                         <label for="location" class="form-label">Location</label>
                         <select class="form-select" id="location" name="location">
                             <option value="">All Locations</option>
@@ -284,9 +290,9 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                             ?>
                         </select>
                     </div>
-                     <div class="col-md-2">
-                        <label for="guard_name" class="form-label">Guard Name</label>
-                        <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Search guard name..."
+                     <div class="col-6 col-md-3">
+                        <label for="guard_name" class="form-label">Search Guard Name</label>
+                        <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Enter name..."
                                value="<?php echo isset($_GET['guard_name']) ? htmlspecialchars($_GET['guard_name']) : ''; ?>">
                     </div>        
                     <div class="col-md-2 d-flex align-items-end">
@@ -510,10 +516,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
         </div>
         <?php } ?>
 
-    
-
-    
-
     <!-- SWAL Alerts for leave requests only (profile picture alerts removed) -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -540,7 +542,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
         });
     </script>
 
-    
 
     <!-- Bootstrap and jQuery JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -690,38 +691,38 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     </script>
 
     <script>
-$(document).ready(function() {
-    // Initialize DataTable with pagination and disable default search box (we use Guard Name field)
-    if ($('#leaveRequestsTable').length) {
-        var table = $('#leaveRequestsTable').DataTable({
-            pageLength: 10,
-            lengthMenu: [10, 25, 50, 100],
-            order: [[5, 'desc']], // Request Date column
-            columnDefs: [
-                { orderable: false, targets: [2, 3] } // Type, Reason
-            ],
-            dom: 'lrtip' // hide built-in search box
+            $(document).ready(function() {
+            // Initialize DataTable with pagination and disable default search box (we use Guard Name field)
+            if ($('#leaveRequestsTable').length) {
+                var table = $('#leaveRequestsTable').DataTable({
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    order: [[5, 'desc']], // Request Date column
+                    columnDefs: [
+                        { orderable: false, targets: [2, 3] } // Type, Reason
+                    ],
+                    dom: 'lrtip' // hide built-in search box
+                });
+
+                // Bind Guard Name input to column 0 search
+                $('#guard_name').on('input', function() {
+                    table.column(0).search(this.value).draw();
+                });
+
+                // Apply initial search if value present from GET
+                if ($('#guard_name').val()) {
+                    table.column(0).search($('#guard_name').val()).draw();
+                }
+            }
+
+            // Initialize Bootstrap tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Actions removed (accept/reject)
         });
-
-        // Bind Guard Name input to column 0 search
-        $('#guard_name').on('input', function() {
-            table.column(0).search(this.value).draw();
-        });
-
-        // Apply initial search if value present from GET
-        if ($('#guard_name').val()) {
-            table.column(0).search($('#guard_name').val()).draw();
-        }
-    }
-
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Actions removed (accept/reject)
-});
-</script>
+    </script>
 </body>
 </html>

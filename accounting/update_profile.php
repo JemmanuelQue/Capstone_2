@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $profilePic = $_FILES['profilePic'];
     
     // Get the referring page for redirect
-    $redirect_page = isset($_POST['redirect_page']) ? $_POST['redirect_page'] : 'hr_dashboard.php';
+    $redirect_page = isset($_POST['redirect_page']) ? $_POST['redirect_page'] : 'accounting_dashboard.php';
 
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'avif', 'jfif']; // Limited to requested formats
     $maxFileSize = 5 * 1024 * 1024;

@@ -19,6 +19,44 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
 } else {
     $superadminProfile = '../images/default_profile.png';
 }
+
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
+// Helper function to check government ID completeness
+function checkGovtIdCompleteness($user) {
+    // Define placeholder patterns that indicate incomplete IDs
+    $placeholderPatterns = [
+        'sss' => ['000000000', '00000000000', '000000000'],
+        'tin' => ['000000000', '000000000000'],
+        'philhealth' => ['000000000000'],
+        'pagibig' => ['000000000000']
+    ];
+    
+    $govtIds = [
+        'sss' => preg_replace('/\D/', '', $user['sss_number'] ?? ''),
+        'tin' => preg_replace('/\D/', '', $user['tin_number'] ?? ''),
+        'philhealth' => preg_replace('/\D/', '', $user['philhealth_number'] ?? ''),
+        'pagibig' => preg_replace('/\D/', '', $user['pagibig_number'] ?? '')
+    ];
+    
+    $incomplete = false;
+    foreach ($govtIds as $type => $id) {
+        if (empty($id) || in_array($id, $placeholderPatterns[$type])) {
+            $incomplete = true;
+            break;
+        }
+    }
+    
+    if ($incomplete) {
+        return '<span class="text-warning" data-bs-toggle="tooltip" title="Some government IDs are incomplete"><i class="material-icons" style="font-size: 18px;">warning</i></span>';
+    } else {
+        return '<span class="text-success" data-bs-toggle="tooltip" title="All government IDs are complete"><i class="material-icons" style="font-size: 18px;">check_circle</i></span>';
+    }
+}
 ?>
 
 
@@ -151,16 +189,16 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                 <!-- Search and Filter -->
                 <div class="card mb-4">
                     <div class="card-body">
-                        <div class="row g-2 g-md-3 align-items-stretch">
+                        <div class="row g-2 g-md-3 align-items-stretch d-flex justify-content-center">
                             <div class="col-md-4">
                                 <div class="input-group">
-                                    <input type="text" id="searchInput" class="form-control" placeholder="Search name or employee ID...">
+                                    <input type="text" id="searchInput" class="form-control" placeholder="Employee ID or name...">
                                     <button class="btn btn-outline-success" type="button" id="searchButton">
                                         <i class="material-icons align-middle">search</i> Search
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <select class="form-select" id="roleFilter">
                                     <option value="">All Roles</option>
                                     <option value="1">Super Admin</option>
@@ -170,11 +208,18 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                     <option value="5">Guard</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <select class="form-select" id="statusFilter">
                                     <option value="">All Statuses</option>
                                     <option value="Active">Active</option>
                                     <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="govtIdFilter">
+                                    <option value="">All Gov ID Status</option>
+                                    <option value="complete">Complete Gov IDs</option>
+                                    <option value="incomplete">Incomplete Gov IDs</option>
                                 </select>
                             </div>
                         </div>
@@ -213,7 +258,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <tbody id="superAdminTable">
                                             <?php
                                             // Get super admin users
-                                            $superAdminStmt = $conn->prepare("SELECT * FROM users WHERE Role_ID = 1 AND archived_at IS NULL ORDER BY Last_Name");
+                                            $superAdminStmt = $conn->prepare("SELECT u.*, g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number FROM users u LEFT JOIN govt_details g ON u.User_ID = g.user_id WHERE u.Role_ID = 1 AND u.archived_at IS NULL ORDER BY u.Last_Name");
                                             $superAdminStmt->execute();
                                             $superAdminUsers = $superAdminStmt->fetchAll(PDO::FETCH_ASSOC);
                                             
@@ -223,12 +268,13 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                                     : '../images/default_profile.png';
                                                 
                                                 $statusClass = ($user['status'] === 'Active') ? 'bg-success' : 'bg-danger';
+                                                $govtIdStatus = checkGovtIdCompleteness($user);
+                                                
                                                 echo '<tr class="user-row" data-role="'.$user['Role_ID'].'" data-user-id="'.$user['User_ID'].'" data-emp-id="'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'" data-status="'.htmlspecialchars(strtolower($user['status'] ?? ''), ENT_QUOTES).'">';
                                                 echo '<td><img src="'.$profilePic.'" class="rounded-circle" width="40" height="40"></td>';
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
-                                                // removed Email and Phone Number columns
-                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span></td>';
+                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
                                                 echo '<td>';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
@@ -278,7 +324,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <tbody id="adminTable">
                                             <?php
                                             // Get admin users
-                                            $adminStmt = $conn->prepare("SELECT * FROM users WHERE Role_ID = 2 AND archived_at IS NULL ORDER BY Last_Name");
+                                            $adminStmt = $conn->prepare("SELECT u.*, g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number FROM users u LEFT JOIN govt_details g ON u.User_ID = g.user_id WHERE u.Role_ID = 2 AND u.archived_at IS NULL ORDER BY u.Last_Name");
                                             $adminStmt->execute();
                                             $adminUsers = $adminStmt->fetchAll(PDO::FETCH_ASSOC);
                                             
@@ -288,12 +334,13 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                                     : '../images/default_profile.png';
                                                 
                                                 $statusClass = ($user['status'] === 'Active') ? 'bg-success' : 'bg-danger';
+                                                $govtIdStatus = checkGovtIdCompleteness($user);
+                                                
                                                 echo '<tr class="user-row" data-role="'.$user['Role_ID'].'" data-user-id="'.$user['User_ID'].'" data-emp-id="'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'" data-status="'.htmlspecialchars(strtolower($user['status'] ?? ''), ENT_QUOTES).'">';
                                                 echo '<td><img src="'.$profilePic.'" class="rounded-circle" width="40" height="40"></td>';
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
-                                                // removed Email and Phone Number columns
-                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span></td>';
+                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
                                                 echo '<td>';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
@@ -343,7 +390,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <tbody id="hrTable">
                                             <?php
                                             // Get HR users
-                                            $hrStmt = $conn->prepare("SELECT * FROM users WHERE Role_ID = 3 AND archived_at IS NULL ORDER BY Last_Name");
+                                            $hrStmt = $conn->prepare("SELECT u.*, g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number FROM users u LEFT JOIN govt_details g ON u.User_ID = g.user_id WHERE u.Role_ID = 3 AND u.archived_at IS NULL ORDER BY u.Last_Name");
                                             $hrStmt->execute();
                                             $hrUsers = $hrStmt->fetchAll(PDO::FETCH_ASSOC);
                                             
@@ -353,12 +400,13 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                                     : '../images/default_profile.png';
                                                 
                                                 $statusClass = ($user['status'] === 'Active') ? 'bg-success' : 'bg-danger';
+                                                $govtIdStatus = checkGovtIdCompleteness($user);
+                                                
                                                 echo '<tr class="user-row" data-role="'.$user['Role_ID'].'" data-user-id="'.$user['User_ID'].'" data-emp-id="'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'" data-status="'.htmlspecialchars(strtolower($user['status'] ?? ''), ENT_QUOTES).'">';
                                                 echo '<td><img src="'.$profilePic.'" class="rounded-circle" width="40" height="40"></td>';
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
-                                                // removed Email and Phone Number columns
-                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span></td>';
+                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
                                                 echo '<td>';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
@@ -408,7 +456,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <tbody id="accountingTable">
                                             <?php
                                             // Get accounting users
-                                            $acctStmt = $conn->prepare("SELECT * FROM users WHERE Role_ID = 4 AND archived_at IS NULL ORDER BY Last_Name");
+                                            $acctStmt = $conn->prepare("SELECT u.*, g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number FROM users u LEFT JOIN govt_details g ON u.User_ID = g.user_id WHERE u.Role_ID = 4 AND u.archived_at IS NULL ORDER BY u.Last_Name");
                                             $acctStmt->execute();
                                             $acctUsers = $acctStmt->fetchAll(PDO::FETCH_ASSOC);
                                             
@@ -418,12 +466,13 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                                     : '../images/default_profile.png';
                                                 
                                                 $statusClass = ($user['status'] === 'Active') ? 'bg-success' : 'bg-danger';
+                                                $govtIdStatus = checkGovtIdCompleteness($user);
+                                                
                                                 echo '<tr class="user-row" data-role="'.$user['Role_ID'].'" data-user-id="'.$user['User_ID'].'" data-emp-id="'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'" data-status="'.htmlspecialchars(strtolower($user['status'] ?? ''), ENT_QUOTES).'">';
                                                 echo '<td><img src="'.$profilePic.'" class="rounded-circle" width="40" height="40"></td>';
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
-                                                // removed Email and Phone Number columns
-                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span></td>';
+                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
                                                 echo '<td>';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
@@ -476,7 +525,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <tbody id="guardsTable">
                                             <?php
                                             // Get guards
-                                            $guardsStmt = $conn->prepare("SELECT * FROM users WHERE Role_ID = 5 AND archived_at IS NULL ORDER BY Last_Name");
+                                            $guardsStmt = $conn->prepare("SELECT u.*, g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number FROM users u LEFT JOIN govt_details g ON u.User_ID = g.user_id WHERE u.Role_ID = 5 AND u.archived_at IS NULL ORDER BY u.Last_Name");
                                             $guardsStmt->execute();
                                             $guardsUsers = $guardsStmt->fetchAll(PDO::FETCH_ASSOC);
                                             
@@ -486,11 +535,13 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                                     : '../images/default_profile.png';
                                                 
                                                 $statusClass = ($user['status'] === 'Active') ? 'bg-success' : 'bg-danger';
+                                                $govtIdStatus = checkGovtIdCompleteness($user);
+                                                
                                                 echo '<tr class="user-row" data-role="'.$user['Role_ID'].'" data-user-id="'.$user['User_ID'].'" data-emp-id="'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'" data-status="'.htmlspecialchars(strtolower($user['status'] ?? ''), ENT_QUOTES).'">';
                                                 echo '<td><img src="'.$profilePic.'" class="rounded-circle" width="40" height="40"></td>';
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
-                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span></td>';
+                                                echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
                                                 echo '<td>';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
@@ -690,6 +741,22 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                     <i class="material-icons-outlined me-2">info</i>
                                     All government IDs are required for payroll and benefits processing.
                                 </div>
+                                
+                                <!-- Employee Type Selection -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-12">
+                                        <label for="employee_type" class="form-label">Employee Type <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="employee_type" name="employee_type" required>
+                                            <option value="">Select Employee Type</option>
+                                            <option value="new">New Employee</option>
+                                            <option value="old">Old Employee</option>
+                                        </select>
+                                        <small class="text-muted">
+                                            <strong>New Employee:</strong> Government IDs will be auto-filled with placeholder values<br>
+                                            <strong>Old Employee:</strong> You must enter actual government ID numbers
+                                        </small>
+                                    </div>
+                                </div>
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="sss_number" class="form-label">SSS Number <span class="text-danger">*</span></label>
@@ -886,77 +953,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
         </div>
     </div>
 
-    <!-- SWAL Alerts for Profile Picture -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if(isset($_SESSION['profilepic_success'])): ?>
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: '<?php echo $_SESSION['profilepic_success']; ?>',
-                    confirmButtonColor: '#2a7d4f'
-                });
-                <?php unset($_SESSION['profilepic_success']); ?>
-            <?php endif; ?>
-
-            <?php if(isset($_SESSION['profilepic_error'])): ?>
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: '<?php echo $_SESSION['profilepic_error']; ?>',
-                    confirmButtonColor: '#dc3545'
-                });
-                <?php unset($_SESSION['profilepic_error']); ?>
-            <?php endif; ?>
-        });
-    </script>
-
-    <!-- Profile Picture Preview Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get the file input and preview image elements
-            const profilePicInput = document.getElementById('profilePic');
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            const previewImage = document.getElementById('imagePreview');
-            const currentImage = document.getElementById('currentProfileImage');
-            
-            // Listen for file selection
-            profilePicInput.addEventListener('change', function() {
-                const file = this.files[0];
-                
-                // Check if a file was selected
-                if (file) {
-                    // Show the preview container
-                    previewContainer.style.display = 'block';
-                    
-                    // Hide the current image
-                    if (currentImage) {
-                        currentImage.style.display = 'none';
-                    }
-                    
-                    // Create a FileReader to read the image
-                    const reader = new FileReader();
-                    
-                    // Set up the FileReader onload event
-                    reader.onload = function(e) {
-                        // Set the preview image source to the loaded data URL
-                        previewImage.src = e.target.result;
-                    }
-                    
-                    // Read the file as a data URL
-                    reader.readAsDataURL(file);
-                    
-                } else {
-                    // If no file selected or selection canceled, show current image
-                    previewContainer.style.display = 'none';
-                    if (currentImage) {
-                        currentImage.style.display = 'block';
-                    }
-                }
-            });
-        });
-    </script>
-
     <!-- Add JavaScript for the page -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -1142,6 +1138,96 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
             formatGovtId(this, 'pagibig');
         });
 
+        // Employee Type handler
+        document.getElementById('employee_type').addEventListener('change', function() {
+            const employeeType = this.value;
+            const govtIdFields = {
+                sss_number: { field: document.getElementById('sss_number'), placeholder: '00-0000000-0', format: 'XX-XXXXXXX-X (10 digits)' },
+                tin_number: { field: document.getElementById('tin_number'), placeholder: '000-000-000', format: 'XXX-XXX-XXX (9 or 12 digits)' },
+                philhealth_number: { field: document.getElementById('philhealth_number'), placeholder: '00-000000000-0', format: 'XX-XXXXXXXXX-X (12 digits)' },
+                pagibig_number: { field: document.getElementById('pagibig_number'), placeholder: '0000-0000-0000', format: 'XXXX-XXXX-XXXX (12 digits)' }
+            };
+
+            if (employeeType === 'new') {
+                // New Employee: Auto-fill with placeholders and make NOT required
+                Object.keys(govtIdFields).forEach(key => {
+                    const fieldInfo = govtIdFields[key];
+                    fieldInfo.field.value = fieldInfo.placeholder;
+                    fieldInfo.field.removeAttribute('required');
+                    fieldInfo.field.classList.remove('is-invalid');
+                    fieldInfo.field.style.backgroundColor = '#f8f9fa'; // Light gray background
+                    
+                    // Update the label to remove required asterisk
+                    const label = fieldInfo.field.parentNode.querySelector('label');
+                    if (label) {
+                        label.innerHTML = label.innerHTML.replace(' <span class="text-danger">*</span>', '');
+                    }
+                    
+                    // Update the small text
+                    const smallText = fieldInfo.field.parentNode.querySelector('small');
+                    if (smallText) {
+                        smallText.textContent = `Format: ${fieldInfo.format} (Auto-filled for new employee)`;
+                    }
+                });
+                
+                // Update alert message
+                const alertDiv = document.querySelector('.form-step[style*="none"] .alert');
+                if (alertDiv) {
+                    alertDiv.innerHTML = '<i class="material-icons-outlined me-2">info</i>Government IDs are auto-filled with placeholder values for new employees. These will be updated later during onboarding.';
+                }
+                
+            } else if (employeeType === 'old') {
+                // Old Employee: Clear fields and make required
+                Object.keys(govtIdFields).forEach(key => {
+                    const fieldInfo = govtIdFields[key];
+                    fieldInfo.field.value = '';
+                    fieldInfo.field.setAttribute('required', 'required');
+                    fieldInfo.field.classList.remove('is-invalid');
+                    fieldInfo.field.style.backgroundColor = ''; // Reset background
+                    
+                    // Update the label to add required asterisk
+                    const label = fieldInfo.field.parentNode.querySelector('label');
+                    if (label && !label.innerHTML.includes('<span class="text-danger">*</span>')) {
+                        label.innerHTML = label.innerHTML + ' <span class="text-danger">*</span>';
+                    }
+                    
+                    // Reset the small text
+                    const smallText = fieldInfo.field.parentNode.querySelector('small');
+                    if (smallText) {
+                        smallText.textContent = `Format: ${fieldInfo.format}`;
+                    }
+                });
+                
+                // Update alert message
+                const alertDiv = document.querySelector('.form-step[style*="none"] .alert');
+                if (alertDiv) {
+                    alertDiv.innerHTML = '<i class="material-icons-outlined me-2">info</i>All government IDs are required for payroll and benefits processing.';
+                }
+                
+            } else {
+                // No selection: Reset to default state
+                Object.keys(govtIdFields).forEach(key => {
+                    const fieldInfo = govtIdFields[key];
+                    fieldInfo.field.value = '';
+                    fieldInfo.field.setAttribute('required', 'required');
+                    fieldInfo.field.classList.remove('is-invalid');
+                    fieldInfo.field.style.backgroundColor = '';
+                    
+                    // Ensure label has required asterisk
+                    const label = fieldInfo.field.parentNode.querySelector('label');
+                    if (label && !label.innerHTML.includes('<span class="text-danger">*</span>')) {
+                        label.innerHTML = label.innerHTML + ' <span class="text-danger">*</span>';
+                    }
+                    
+                    // Reset the small text
+                    const smallText = fieldInfo.field.parentNode.querySelector('small');
+                    if (smallText) {
+                        smallText.textContent = `Format: ${fieldInfo.format}`;
+                    }
+                });
+            }
+        });
+
         // Next button click handler
         nextButtons.forEach(button => {
             button.addEventListener('click', function(e) {
@@ -1303,14 +1389,16 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
         const searchButton = document.getElementById('searchButton');
         const roleFilter = document.getElementById('roleFilter');
         const statusFilter = document.getElementById('statusFilter');
+        const govtIdFilter = document.getElementById('govtIdFilter');
 
         function filterUsers() {
             const searchTerm = searchInput.value.trim().toLowerCase();
             const selectedRole = roleFilter.value;
             const selectedStatus = (statusFilter && statusFilter.value) ? statusFilter.value.toLowerCase() : '';
+            const selectedGovtId = govtIdFilter.value;
 
             // If no filters are active, reset view and exit early
-            if (searchTerm === '' && selectedRole === '' && selectedStatus === '') {
+            if (searchTerm === '' && selectedRole === '' && selectedStatus === '' && selectedGovtId === '') {
                 // Show all accordion items and rows
                 document.querySelectorAll('.accordion-item').forEach(item => (item.style.display = ''));
                 document.querySelectorAll('.user-row').forEach(row => (row.style.display = ''));
@@ -1370,6 +1458,11 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                     const empId = (row.getAttribute('data-emp-id') || '').toLowerCase();
                     const userRole = row.getAttribute('data-role');
                     const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+                    
+                    // Check government ID status in the status cell
+                    const statusCell = row.cells[3];
+                    const hasWarningIcon = statusCell.querySelector('i.material-icons');
+                    const govtIdComplete = hasWarningIcon && hasWarningIcon.textContent.trim() === 'check_circle';
 
                     const matchesSearch = searchTerm === '' ||
                         fullName.includes(searchTerm) ||
@@ -1377,7 +1470,11 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
 
                     const matchesRole = selectedRole === '' || userRole === selectedRole;
                     const matchesStatus = selectedStatus === '' || rowStatus === selectedStatus;
-                    const shouldShow = matchesSearch && matchesRole && matchesStatus;
+                    const matchesGovtId = selectedGovtId === '' || 
+                        (selectedGovtId === 'complete' && govtIdComplete) ||
+                        (selectedGovtId === 'incomplete' && !govtIdComplete);
+                    
+                    const shouldShow = matchesSearch && matchesRole && matchesStatus && matchesGovtId;
                     row.style.display = shouldShow ? '' : 'none';
                     if (shouldShow) {
                         hasVisibleRow = true;
@@ -1448,6 +1545,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
             searchInput.value = '';
             roleFilter.value = '';
             if (statusFilter) statusFilter.value = '';
+            if (govtIdFilter) govtIdFilter.value = '';
             
             // Show all accordion items
             const accordionItems = document.querySelectorAll('.accordion-item');
@@ -1487,8 +1585,9 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     // Add event listeners for search
         searchInput.addEventListener('input', filterUsers);
         searchButton.addEventListener('click', filterUsers);
-    roleFilter.addEventListener('change', filterUsers);
-    if (statusFilter) statusFilter.addEventListener('change', filterUsers);
+        roleFilter.addEventListener('change', filterUsers);
+        if (statusFilter) statusFilter.addEventListener('change', filterUsers);
+        if (govtIdFilter) govtIdFilter.addEventListener('change', filterUsers);
 
     // Run once on page load to honor any pre-selected filters
     filterUsers();

@@ -18,6 +18,12 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     $superadminProfile = '../images/default_profile.png';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Include PayrollCalculator class
 require_once 'payroll_calculation/unified_payroll_calculator.php';
 
@@ -161,9 +167,9 @@ if (empty($startDate) || empty($dateRange)) {
         </div>
 
     <!-- Date Filter UI -->
-    <div class="container-fluid mb-3">
+    <div class="container-fluid mb-3 mt-4">
         <div class="filter-container">
-            <form id="payrollFilterForm" class="row g-2 align-items-end" method="GET" action="">
+            <form id="payrollFilterForm" class="row g-2 align-items-end d-flex justify-content-center" method="GET" action="">
                 <div class="col-md-2">
                     <label for="month" class="form-label">Month</label>
                     <select class="form-select" id="month" name="month">
@@ -233,7 +239,11 @@ if (empty($startDate) || empty($dateRange)) {
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-success w-100">Apply Filter</button>
+                    <button type="submit"
+                            class="btn btn-success filter-btn d-flex justify-content-center align-items-center gap-1"
+                            name="filter_submit">
+                        <i class="material-icons">search</i> Apply
+                    </button>
                 </div>
             </form>
         </div>

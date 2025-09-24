@@ -26,6 +26,12 @@ if (isset($_GET['filter_submit'])) {
     $locationFilter = '';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Get current superadmin user's name
 $superadminStmt = $conn->prepare("SELECT First_Name, Last_Name FROM users WHERE Role_ID = 1 AND status = 'Active' AND User_ID = ?");
 $superadminStmt->execute([$_SESSION['user_id']]);

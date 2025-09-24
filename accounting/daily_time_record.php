@@ -1,15 +1,19 @@
 <?php
 require_once __DIR__ . '/../includes/session_check.php';
-validateSession($conn, 4);
-
-// Database connection
-require_once '../db_connection.php'; // assumes $conn is PDO
+validateSession($conn, 4); // Accounting only
+require_once '../db_connection.php'; 
 
 // Get current date info for default filter values
 $currentYear = date('Y');
 $currentMonth = date('m');
 $day = date('d');
 $datePeriod = ($day <= 15) ? '1-15' : '16-31';
+
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
 
 // Handle filter form submission
 if (isset($_GET['filter_submit'])) {
@@ -32,7 +36,7 @@ $superadminStmt->execute([$_SESSION['user_id']]);
 $superadminData = $superadminStmt->fetch(PDO::FETCH_ASSOC);
 $superadminName = $superadminData ? $superadminData['First_Name'] . ' ' . $superadminData['Last_Name'] : "Accounting";
 
-// Get superadmin's profile picture
+// Get accounting's profile picture
 $profileStmt = $conn->prepare("SELECT Profile_Pic, First_Name, Last_Name FROM users WHERE User_ID = ?");
 $profileStmt->execute([$_SESSION['user_id']]);
 $profileData = $profileStmt->fetch(PDO::FETCH_ASSOC);
@@ -213,7 +217,7 @@ $monthName = date('F', strtotime("$year-$month-01"));
                 </div>
                 <div class="user-profile" id="userProfile" data-bs-toggle="modal" data-bs-target="#profileModal">
                     <span><?php echo $superadminName; ?></span>
-                    <img src="<?php echo $superadminProfile; ?>" alt="User Profile">
+                    <a href="profile.php"><img src="<?php echo $superadminProfile; ?>" alt="User Profile"></a>
                 </div>
         </div>
 
@@ -222,9 +226,9 @@ $monthName = date('F', strtotime("$year-$month-01"));
             <h1 class="page-title">Daily Time Records - Guards</h1>
             
             <!-- Filters -->
-            <div class="filter-container">
+            <div class="filter-container d-flex justify-content-center">
                 <form method="GET" class="filter-form-custom row g-2 align-items-end">
-                    <div class="col-6 col-md-1">
+                    <div class="col-6 col-md-2">
                         <label for="monthFilter" class="form-label">Month</label>
                         <select class="form-select" id="monthFilter" name="month">
                             <option value="01" <?php echo $month == '01' ? 'selected' : ''; ?>>January</option>
@@ -270,7 +274,7 @@ $monthName = date('F', strtotime("$year-$month-01"));
                     </div>
                     <div class="col-12 col-md-2">
                         <label for="guardSearch" class="form-label">Search Guard</label>
-                        <input type="text" class="form-control" id="guardSearch" name="guardSearch" placeholder="Enter guard name" value="<?php echo htmlspecialchars($searchTerm); ?>">
+                        <input type="text" class="form-control" id="guardSearch" name="guardSearch" placeholder="Enter name..." value="<?php echo htmlspecialchars($searchTerm); ?>">
                     </div>
                     <div class="col-12 col-md-1 d-grid">
                         <label class="form-label" style="visibility:hidden;">Apply</label>
@@ -282,14 +286,26 @@ $monthName = date('F', strtotime("$year-$month-01"));
             </div>
                         
             <!-- Period Summary Banner -->
-            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            <div class="alert alert-success alert-dismissible fade show mb-1" role="alert">
                 <div class="d-flex align-items-center">
                     <i class="material-icons me-2">date_range</i>
                     <strong>Viewing: </strong> &nbsp; <?php echo $monthName . ' ' . $year . ' (' . $periodLabel . ')'; ?>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            
+
+            <!-- Export buttons placed outside the filter container, aligned to the right -->
+            <div class="d-flex justify-content-end mt-2 gap-2">
+                <button type="button" id="exportPdfBtn" class="btn btn-danger">
+                    <span class="material-icons" style="vertical-align:middle;">picture_as_pdf</span>
+                    <span>Export PDF</span>
+                </button>
+                <button type="button" id="exportExcelBtn" class="btn btn-primary">
+                    <span class="material-icons" style="vertical-align:middle;">table_view</span>
+                    <span>Export Excel</span>
+                </button>
+            </div><br>
+
             <!-- Guard attendance records display -->
             <div id="guardAttendanceData">
                 <?php
@@ -504,21 +520,6 @@ $monthName = date('F', strtotime("$year-$month-01"));
                                 value="<?php echo $superadminData['First_Name']; ?>">
                         </div>
                         <div class="mb-3">
-                            <label for="lastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="lastName" name="lastName" 
-                                value="<?php echo $superadminData['Last_Name']; ?>">
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Removed add/edit/archive modals -->
 
     <!-- SWAL Alerts for Profile Picture -->
     <script>
@@ -545,52 +546,6 @@ $monthName = date('F', strtotime("$year-$month-01"));
         });
     </script>
 
-    <!-- Profile Picture Preview Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get the file input and preview image elements
-            const profilePicInput = document.getElementById('profilePic');
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            const previewImage = document.getElementById('imagePreview');
-            const currentImage = document.getElementById('currentProfileImage');
-            
-            // Listen for file selection
-            profilePicInput.addEventListener('change', function() {
-                const file = this.files[0];
-                
-                // Check if a file was selected
-                if (file) {
-                    // Show the preview container
-                    previewContainer.style.display = 'block';
-                    
-                    // Hide the current image
-                    if (currentImage) {
-                        currentImage.style.display = 'none';
-                    }
-                    
-                    // Create a FileReader to read the image
-                    const reader = new FileReader();
-                    
-                    // Set up the FileReader onload event
-                    reader.onload = function(e) {
-                        // Set the preview image source to the loaded data URL
-                        previewImage.src = e.target.result;
-                    }
-                    
-                    // Read the file as a data URL
-                    reader.readAsDataURL(file);
-                    
-                } else {
-                    // If no file selected or selection canceled, show current image
-                    previewContainer.style.display = 'none';
-                    if (currentImage) {
-                        currentImage.style.display = 'block';
-                    }
-                }
-            });
-        });
-    </script>
-
     <!-- Bootstrap and jQuery JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
@@ -600,6 +555,38 @@ $monthName = date('F', strtotime("$year-$month-01"));
 
     <!-- Sidebar and Tooltip??? JS -->
     <script src="js/accounting_dashboard.js"></script>
+
+    <script>
+$(document).ready(function() {
+    // Build export URL with current filters
+    function buildExportUrl(type){
+        const params = new URLSearchParams();
+        params.set('month', $('#monthFilter').val());
+        params.set('year', $('#yearFilter').val());
+        params.set('period', $('#periodFilter').val());
+        const loc = $('#locationFilter').val();
+        const search = $('#guardSearch').val();
+        if (loc) params.set('location', loc);
+        if (search) params.set('guardSearch', search);
+        // Unified endpoint
+        let endpoint = 'dtr_pdf_excel.php';
+        // Map type to action param
+        let action = 'excel';
+        if (type === 'pdf') action = 'pdf';
+        params.set('action', action);
+        return endpoint + '?' + params.toString();
+    }
+
+    $('#exportPdfBtn').on('click', function(){
+        const url = buildExportUrl('pdf');
+        window.open(url, '_blank');
+    });
+    $('#exportExcelBtn').on('click', function(){
+        const url = buildExportUrl('excel');
+        window.open(url, '_blank');
+    });
+});
+</script>
 
     <!-- Mobile Bottom Navigation -->
     <div class="mobile-nav">
@@ -645,9 +632,5 @@ $monthName = date('F', strtotime("$year-$month-01"));
         </div>
     </div>
 
-
-    <script>
-    // Actions removed: no JS handlers required
-    </script>
 </body>
 </html>

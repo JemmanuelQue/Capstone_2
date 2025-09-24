@@ -16,6 +16,12 @@ if (!validateSession($conn, 4)) { // 4 = accounting role
 }
 // require_once '../includes/auth_check.php'; might include in future...
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Initialize essential variables
 $pageTitle = "Accounting Dashboard";
 $currentDateTime = date('F d, Y');
@@ -431,14 +437,12 @@ $trendData = getPayrollTrendData($conn, $payrollCalculator);
             </div>
             <div class="user-profile" id="userProfile" data-bs-toggle="modal" data-bs-target="#profileModal">
                 <span><?php echo $profileData['First_Name'] . ' ' . $profileData['Last_Name']; ?></span>
-                <img src="<?php echo $profileData['Profile_Pic']; ?>" alt="User Profile">
+                <a href="profile.php"><img src="<?php echo $profileData['Profile_Pic']; ?>" alt="User Profile"></a>
             </div>
         </div>
         
         <!-- Dashboard Content -->
         <div class="container-fluid mt-4">
-            <h1 class="mb-4"><center>Welcome Accounting!</center></h1><br>
-            
             <h2 class="mb-4"><center>Today's Analytics Show</center></h2>
             
             <div class="row">
@@ -666,55 +670,6 @@ $trendData = getPayrollTrendData($conn, $payrollCalculator);
             </div>
         </div>
     </div>
-
-    <!-- Profile Modal -->
-     <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Add method and enctype for file uploads -->
-                    <form id="updateProfileForm" method="POST" action="update_profile.php" enctype="multipart/form-data">
-                        <div class="mb-3">
-                            <label for="profilePic" class="form-label">Profile Image</label>
-                            <div class="text-center mb-3">
-                                <!-- Current profile image -->
-                                <img id="currentProfileImage" src="<?php echo $profileData['Profile_Pic']; ?>" 
-                                    alt="Current Profile" class="rounded-circle" width="100" height="100">
-                                    
-                                <!-- Preview container (initially hidden) -->
-                                <div id="imagePreviewContainer" style="display: none;" class="mt-3">
-                                    <p id="previewText" class="text-muted mb-2"></p>
-                                    <img id="imagePreview" src="#" alt="Image Preview" class="rounded-circle" width="100" height="100">
-                                </div>
-                            </div>
-                            <input type="file" class="form-control" id="profilePic" name="profilePic" 
-                                accept=".jpg,.jpeg,.png,.avif">
-                            <small class="form-text text-muted">Accepted file types: JPG, PNG, AVIF. Max size: 5MB</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="firstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="firstName" name="firstName" 
-                                value="<?php echo $profileData['First_Name']; ?>">
-                        </div>
-                        <div class="mb-3">
-                            <label for="lastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="lastName" name="lastName" 
-                                value="<?php echo $profileData['Last_Name']; ?>">
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    
 
     <!-- Mobile Bottom Navigation -->
     <div class="mobile-nav">
@@ -975,32 +930,5 @@ $trendData = getPayrollTrendData($conn, $payrollCalculator);
         }
     });
     </script>
-
-    <!-- SWAL Alerts for Profile Picture -->
-    <?php if(isset($_SESSION['profilepic_success']) || isset($_SESSION['profilepic_error'])): ?>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if(isset($_SESSION['profilepic_success'])): ?>
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: '<?php echo $_SESSION['profilepic_success']; ?>',
-                    confirmButtonColor: '#2a7d4f'
-                });
-                <?php unset($_SESSION['profilepic_success']); ?>
-            <?php endif; ?>
-
-            <?php if(isset($_SESSION['profilepic_error'])): ?>
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: '<?php echo $_SESSION['profilepic_error']; ?>',
-                    confirmButtonColor: '#dc3545'
-                });
-                <?php unset($_SESSION['profilepic_error']); ?>
-            <?php endif; ?>
-        });
-    </script>
-    <?php endif; ?>
 </body>
 </html>

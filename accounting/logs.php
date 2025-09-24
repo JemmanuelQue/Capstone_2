@@ -15,6 +15,12 @@ $profileStmt->execute([$_SESSION['user_id']]);
 $profileData = $profileStmt->fetch(PDO::FETCH_ASSOC);
 $profilePic = $profileData['Profile_Pic'] ? $profileData['Profile_Pic'] : '../images/default_profile.png';
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Set default date filters to current month if not specified
 $currentYear = date('Y');
 $currentMonth = date('m');
@@ -529,9 +535,30 @@ foreach ($categorizedLogs as $category => $logs) {
             </div>
             <div class="user-profile" id="userProfile" data-bs-toggle="modal" data-bs-target="#profileModal">
                 <span><?php echo $accountingName; ?></span>
-                <img src="<?php echo $profilePic; ?>" alt="User Profile">
+                <a href="profile.php"><img src="<?php echo $profilePic; ?>" alt="User Profile"></a>
             </div>
         </div>
+
+        <script>
+            function updateDateTime() {
+                const now = new Date();
+                // Format date: YYYY-MM-DD or whatever you want
+                const date = now.toLocaleDateString('en-US', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                });
+                // Format time: HH:MM:SS
+                const time = now.toLocaleTimeString('en-US', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+
+                document.getElementById('current-date').textContent = date;
+                document.getElementById('current-time').textContent = time;
+            }
+            // update every second
+            setInterval(updateDateTime, 1000);
+            // run immediately
+            updateDateTime();
+            </script>
 
         <div class="content-container">
             <div class="container-fluid px-4">
@@ -552,9 +579,7 @@ foreach ($categorizedLogs as $category => $logs) {
                                         'Attendance Archive', 
                                         'Attendance Delete Permanent',
                                         'Attendance Edit',
-                                        'Cash Advance',
                                         'Holiday Management',
-                                        'Payroll Generation',
                                         'Rate Update'
                                     ];
                                     
@@ -832,48 +857,10 @@ foreach ($categorizedLogs as $category => $logs) {
                 <?php endif; ?>
             </div>
         </div>
-
-        <!-- Update Profile Modal -->
-        <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="updateProfileForm" method="POST" action="update_profile.php" enctype="multipart/form-data">
-                            <div class="mb-3 text-center">
-                                <img src="<?php echo $profilePic; ?>" class="rounded-circle" width="100" height="100" id="profilePreview">
-                                <div class="mt-2">
-                                    <label for="profilePic" class="btn btn-sm btn-outline-secondary">
-                                        Change Profile Picture
-                                    </label>
-                                    <input type="file" class="d-none" id="profilePic" name="profilePic" accept="image/*">
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="firstName" class="form-label">First Name</label>
-                                <input type="text" class="form-control" id="firstName" name="firstName" 
-                                    value="<?php echo isset($accountingData['First_Name']) ? $accountingData['First_Name'] : ''; ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="lastName" class="form-label">Last Name</label>
-                                <input type="text" class="form-control" id="lastName" name="lastName" 
-                                    value="<?php echo isset($accountingData['Last_Name']) ? $accountingData['Last_Name'] : ''; ?>">
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Save Changes</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
@@ -930,6 +917,27 @@ foreach ($categorizedLogs as $category => $logs) {
             window.submitForm = submitForm;
         });
     </script>
+
+      <script>
+        $(function() {
+            $('#date_range').daterangepicker({
+                autoUpdateInput: false,
+                locale: { cancelLabel: 'Clear' }
+            });
+
+            $('#date_range').on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+                $('#date_from').val(picker.startDate.format('YYYY-MM-DD'));
+                $('#date_to').val(picker.endDate.format('YYYY-MM-DD'));
+            });
+
+            $('#date_range').on('cancel.daterangepicker', function() {
+                $(this).val('');
+                $('#date_from').val('');
+                $('#date_to').val('');
+            });
+        });
+        </script>
 
     <!-- Mobile Navigation -->
     <div class="mobile-nav">

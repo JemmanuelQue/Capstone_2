@@ -23,6 +23,12 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     $superadminProfile = '../images/default_profile.png';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Get filter parameters - month, year, and department
 $month = isset($_GET['month']) ? $_GET['month'] : date('m');
 $year = isset($_GET['year']) ? $_GET['year'] : date('Y');
@@ -423,7 +429,7 @@ function calculateEmployeePayrollData($userId, $payrollCalculator, $year, $month
                 </div>
                 <div class="user-profile" id="userProfile" data-bs-toggle="modal" data-bs-target="#profileModal">
                     <span><?php echo $superadminName; ?></span>
-                    <img src="<?php echo $superadminProfile; ?>" alt="User Profile">
+                    <a href="profile.php"><img src="<?php echo $superadminProfile; ?>" alt="User Profile"></a>
                 </div>
         </div>
 
@@ -433,7 +439,7 @@ function calculateEmployeePayrollData($userId, $payrollCalculator, $year, $month
             
             <!-- Filters -->
             <div class="filter-container">
-                <form method="GET" class="filter-form-custom row g-2 align-items-end">
+                <form method="GET" class="filter-form-custom row g-2 align-items-end d-flex justify-content-center">
                     <div class="col-md-3">
                         <label for="monthFilter" class="form-label">Month</label>
                         <select class="form-select" id="monthFilter" name="month">
@@ -472,7 +478,7 @@ function calculateEmployeePayrollData($userId, $payrollCalculator, $year, $month
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-success filter-btn">
-                            <i class="material-icons">search</i> Apply Filter
+                            <i class="material-icons">search</i> Apply
                         </button>
                     </div>
                 </form>
@@ -621,128 +627,7 @@ function calculateEmployeePayrollData($userId, $payrollCalculator, $year, $month
                 </div>
             </div>
         </div>
-                        
-        
-    <!-- Update Profile Modal -->
-    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Add method and enctype for file uploads -->
-                    <form id="updateProfileForm" method="POST" action="update_profile.php" enctype="multipart/form-data">
-                        <div class="mb-3">
-                            <label for="profilePic" class="form-label">Profile Image</label>
-                            <div class="text-center mb-3">
-                                <!-- Current profile image -->
-                                <img id="currentProfileImage" src="<?php echo !empty($superadminProfile) ? $superadminProfile : '../assets/images/profile.jpg'; ?>" 
-                                    alt="Current Profile" class="rounded-circle" width="100" height="100">
-                                    
-                                <!-- Preview container (initially hidden) -->
-                                <div id="imagePreviewContainer" style="display: none;" class="mt-3">
-                                    <p id="previewText" class="text-muted mb-2"></p>
-                                    <img id="imagePreview" src="#" alt="Image Preview" class="rounded-circle" width="100" height="100">
-                                </div>
-                            </div>
-                            <input type="file" class="form-control" id="profilePic" name="profilePic" 
-                                accept=".jpg,.jpeg,.png,.avif">
-                            <small class="form-text text-muted">Accepted file types: JPG, PNG, AVIF. Max size: 5MB</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="firstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="firstName" name="firstName" 
-                                value="<?php echo $superadminData['First_Name']; ?>">
-                        </div>
-                        <div class="mb-3">
-                            <label for="lastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="lastName" name="lastName" 
-                                value="<?php echo $superadminData['Last_Name']; ?>">
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- SWAL Alerts for Profile Picture -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if(isset($_SESSION['profilepic_success'])): ?>
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: '<?php echo $_SESSION['profilepic_success']; ?>',
-                    confirmButtonColor: '#2a7d4f'
-                });
-                <?php unset($_SESSION['profilepic_success']); ?>
-            <?php endif; ?>
-
-            <?php if(isset($_SESSION['profilepic_error'])): ?>
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: '<?php echo $_SESSION['profilepic_error']; ?>',
-                    confirmButtonColor: '#dc3545'
-                });
-                <?php unset($_SESSION['profilepic_error']); ?>
-            <?php endif; ?>
-        });
-    </script>
-
-    <!-- Profile Picture Preview Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get the file input and preview image elements
-            const profilePicInput = document.getElementById('profilePic');
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            const previewImage = document.getElementById('imagePreview');
-            const currentImage = document.getElementById('currentProfileImage');
-            
-            // Listen for file selection
-            profilePicInput.addEventListener('change', function() {
-                const file = this.files[0];
-                
-                // Check if a file was selected
-                if (file) {
-                    // Show the preview container
-                    previewContainer.style.display = 'block';
                     
-                    // Hide the current image
-                    if (currentImage) {
-                        currentImage.style.display = 'none';
-                    }
-                    
-                    // Create a FileReader to read the image
-                    const reader = new FileReader();
-                    
-                    // Set up the FileReader onload event
-                    reader.onload = function(e) {
-                        // Set the preview image source to the loaded data URL
-                        previewImage.src = e.target.result;
-                    }
-                    
-                    // Read the file as a data URL
-                    reader.readAsDataURL(file);
-                    
-                } else {
-                    // If no file selected or selection canceled, show current image
-                    previewContainer.style.display = 'none';
-                    if (currentImage) {
-                        currentImage.style.display = 'block';
-                    }
-                }
-            });
-        });
-    </script>
-
     <!-- Bootstrap and jQuery JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>

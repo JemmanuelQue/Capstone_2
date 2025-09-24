@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../db_connection.php';
 require_once __DIR__ . '/../includes/session_check.php';
 
-// Allow only HR (Role_ID = 1); validateSession handles redirects
+// Allow only Super Admin (Role_ID = 1); validateSession handles redirects
 if (!validateSession($conn, 1)) {
     exit();
 }
@@ -66,7 +66,10 @@ $roleLabel = isset($roles[$user['Role_ID']]) ? $roles[$user['Role_ID']] : 'User'
 <body>
     <div class="container-xxl py-4">
         <div class="d-flex justify-content-end mb-3">
-            <a href="superadmin_dashboard.php" class="btn btn-outline-secondary btn-sm"><span class="material-icons" style="font-size:18px; vertical-align:middle;">arrow_back</span> Back</a>
+            <?php
+            $backPage = isset($_SESSION['last_page']) ? $_SESSION['last_page'] : 'superadmin_dashboard.php';
+            ?>
+            <a href="<?php echo htmlspecialchars($backPage); ?>" class="btn btn-outline-secondary btn-sm"><span class="material-icons" style="font-size:18px; vertical-align:middle;">arrow_back</span> Back</a>
         </div>
 
         <div class="row g-3">
