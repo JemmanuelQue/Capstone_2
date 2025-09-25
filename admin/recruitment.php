@@ -77,6 +77,12 @@ if ($sort === 'newest') {
     $query .= " ORDER BY Last_Name DESC, First_Name DESC";
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 try {
     $stmt = $conn->prepare($query);
     $stmt->execute($params);

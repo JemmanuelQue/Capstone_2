@@ -14,7 +14,7 @@ require '../vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Auth: only Super Admin using proper session validation
+// Auth: only Admin using proper session validation
 if (!validateSession($conn, 2, false)) {
     ob_clean(); // Clear any output
     header('Content-Type: application/json');
@@ -356,12 +356,19 @@ function addUser() {
         $hire_date = $_POST['hire_date'] ?? '';
         $guard_location = $_POST['guard_location'] ?? '';
         $employee_id = $_POST['employee_id'] ?? '';
+        $employee_type = $_POST['employee_type'] ?? '';
         
-        // Government ID fields (required)
+        // Government ID fields - validation depends on employee type
         $sss_number = unformatGovtId($_POST['sss_number'] ?? '');
         $tin_number = unformatGovtId($_POST['tin_number'] ?? '');
         $philhealth_number = unformatGovtId($_POST['philhealth_number'] ?? '');
         $pagibig_number = unformatGovtId($_POST['pagibig_number'] ?? '');
+        
+        // Validate employee type
+        if (empty($employee_type) || !in_array($employee_type, ['new', 'old'], true)) {
+            echo json_encode(['success' => false, 'message' => 'Please select a valid employee type']);
+            return;
+        }
         
         // Normalize civil status: DB supports Single, Married, Widowed, Divorced, Separated
         if (strcasecmp($civil_status, 'Annulled') === 0) {
@@ -373,12 +380,54 @@ function addUser() {
             return;
         }
         
-        // Validate required fields
-        if (empty($role_id) || empty($first_name) || empty($last_name) || empty($phone_number) || 
-            empty($email) || empty($birth_date) || empty($hire_date) || empty($employee_id) ||
-            empty($sss_number) || empty($tin_number) || empty($philhealth_number) || empty($pagibig_number)) {
-            echo json_encode(['success' => false, 'message' => 'Please fill in all required fields including government IDs']);
-            return;
+        // Validate required fields - government IDs validation depends on employee type
+        $requiredGovtIds = ($employee_type === 'old');
+        $requiredBasicFields = [
+            'role_id' => $role_id,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'phone_number' => $phone_number,
+            'email' => $email,
+            'birth_date' => $birth_date,
+            'hire_date' => $hire_date,
+            'employee_id' => $employee_id
+        ];
+        
+        // Check basic required fields
+        foreach ($requiredBasicFields as $fieldName => $fieldValue) {
+            if (empty($fieldValue)) {
+                echo json_encode(['success' => false, 'message' => "Please fill in all required fields (missing: $fieldName)"]);
+                return;
+            }
+        }
+        
+        // Check government IDs based on employee type
+        if ($requiredGovtIds) {
+            // For old employees, all government IDs are required and must be real values
+            if (empty($sss_number) || empty($tin_number) || empty($philhealth_number) || empty($pagibig_number)) {
+                echo json_encode(['success' => false, 'message' => 'All government IDs are required for existing employees']);
+                return;
+            }
+            
+            // For old employees, placeholder values are not allowed
+            if (isPlaceholderGovtId($sss_number) || isPlaceholderGovtId($tin_number) || 
+                isPlaceholderGovtId($philhealth_number) || isPlaceholderGovtId($pagibig_number)) {
+                echo json_encode(['success' => false, 'message' => 'Please enter actual government ID numbers, not placeholder values']);
+                return;
+            }
+        } else {
+            // For new employees, set default placeholder values if fields are empty or already placeholders
+            $defaultGovtIds = [
+                'sss' => '000000000',      // Will be formatted as 00-0000000-0
+                'tin' => '000000000',      // Will be formatted as 000-000-000
+                'philhealth' => '000000000000', // Will be formatted as 00-000000000-0
+                'pagibig' => '000000000000'     // Will be formatted as 0000-0000-0000
+            ];
+            
+            $sss_number = empty($sss_number) || isPlaceholderGovtId($sss_number) ? $defaultGovtIds['sss'] : $sss_number;
+            $tin_number = empty($tin_number) || isPlaceholderGovtId($tin_number) ? $defaultGovtIds['tin'] : $tin_number;
+            $philhealth_number = empty($philhealth_number) || isPlaceholderGovtId($philhealth_number) ? $defaultGovtIds['philhealth'] : $philhealth_number;
+            $pagibig_number = empty($pagibig_number) || isPlaceholderGovtId($pagibig_number) ? $defaultGovtIds['pagibig'] : $pagibig_number;
         }
         
         // Validate birth date - must be at least 18 years old
@@ -405,40 +454,43 @@ function addUser() {
             return;
         }
         
-        // Validate government IDs format (only if not placeholder values)
-        if (!isPlaceholderGovtId($sss_number) && !validateSSS($sss_number)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid SSS number format. Must be 10 digits.']);
-            return;
-        }
-        if (!isPlaceholderGovtId($tin_number) && !validateTIN($tin_number)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid TIN number format. Must be 9 or 12 digits.']);
-            return;
-        }
-        if (!isPlaceholderGovtId($philhealth_number) && !validatePhilHealth($philhealth_number)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid PhilHealth number format. Must be 12 digits.']);
-            return;
-        }
-        if (!isPlaceholderGovtId($pagibig_number) && !validatePagIbig($pagibig_number)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid Pag-IBIG number format. Must be 12 digits.']);
-            return;
-        }
-        
-        // Check for duplicate government IDs (only if not placeholder values)
-        if (!isPlaceholderGovtId($sss_number) && checkGovtIdExists($conn, 'sss', $sss_number)) {
-            echo json_encode(['success' => false, 'message' => 'SSS number already exists for another employee.']);
-            return;
-        }
-        if (!isPlaceholderGovtId($tin_number) && checkGovtIdExists($conn, 'tin', $tin_number)) {
-            echo json_encode(['success' => false, 'message' => 'TIN number already exists for another employee.']);
-            return;
-        }
-        if (!isPlaceholderGovtId($philhealth_number) && checkGovtIdExists($conn, 'philhealth', $philhealth_number)) {
-            echo json_encode(['success' => false, 'message' => 'PhilHealth number already exists for another employee.']);
-            return;
-        }
-        if (!isPlaceholderGovtId($pagibig_number) && checkGovtIdExists($conn, 'pagibig', $pagibig_number)) {
-            echo json_encode(['success' => false, 'message' => 'Pag-IBIG number already exists for another employee.']);
-            return;
+        // Validate government IDs format and duplicates (only for old employees with actual values)
+        if ($employee_type === 'old') {
+            // Format validation
+            if (!validateSSS($sss_number)) {
+                echo json_encode(['success' => false, 'message' => 'Invalid SSS number format. Must be 10 digits.']);
+                return;
+            }
+            if (!validateTIN($tin_number)) {
+                echo json_encode(['success' => false, 'message' => 'Invalid TIN number format. Must be 9 or 12 digits.']);
+                return;
+            }
+            if (!validatePhilHealth($philhealth_number)) {
+                echo json_encode(['success' => false, 'message' => 'Invalid PhilHealth number format. Must be 12 digits.']);
+                return;
+            }
+            if (!validatePagIbig($pagibig_number)) {
+                echo json_encode(['success' => false, 'message' => 'Invalid Pag-IBIG number format. Must be 12 digits.']);
+                return;
+            }
+            
+            // Duplicate check
+            if (checkGovtIdExists($conn, 'sss', $sss_number)) {
+                echo json_encode(['success' => false, 'message' => 'SSS number already exists for another employee.']);
+                return;
+            }
+            if (checkGovtIdExists($conn, 'tin', $tin_number)) {
+                echo json_encode(['success' => false, 'message' => 'TIN number already exists for another employee.']);
+                return;
+            }
+            if (checkGovtIdExists($conn, 'philhealth', $philhealth_number)) {
+                echo json_encode(['success' => false, 'message' => 'PhilHealth number already exists for another employee.']);
+                return;
+            }
+            if (checkGovtIdExists($conn, 'pagibig', $pagibig_number)) {
+                echo json_encode(['success' => false, 'message' => 'Pag-IBIG number already exists for another employee.']);
+                return;
+            }
         }
         
         // Check if employee ID already exists
@@ -974,4 +1026,5 @@ function generateRandomPassword($length = 10) {
     for ($i = 0; $i < $length; $i++) { $password .= $characters[random_int(0, strlen($characters) - 1)]; }
     return $password;
 }
+
 ?>

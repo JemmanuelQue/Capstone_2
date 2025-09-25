@@ -44,6 +44,12 @@ $position = isset($_GET['position']) ? $_GET['position'] : '';
 $location = isset($_GET['location']) ? $_GET['location'] : '';
 $sort = isset($_GET['sort']) ? $_GET['sort'] : 'newest';
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Build query based on filters
 $query = "SELECT * FROM applicants WHERE 1=1";
 $params = [];

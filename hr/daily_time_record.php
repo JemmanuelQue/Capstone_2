@@ -28,6 +28,12 @@ if (isset($_GET['filter_submit'])) {
     $locationFilter = '';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Get current Accounting user's name
 $superadminStmt = $conn->prepare("SELECT First_Name, Last_Name FROM users WHERE Role_ID = 3 AND status = 'Active' AND User_ID = ?");
 $superadminStmt->execute([$_SESSION['user_id']]);
@@ -135,6 +141,17 @@ $monthName = date('F', strtotime("$year-$month-01"));
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        .badge-primary {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .badge-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+    </style>
 </head>
 <body>
      <!-- Sidebar -->
@@ -225,8 +242,8 @@ $monthName = date('F', strtotime("$year-$month-01"));
             
             <!-- Filters -->
             <div class="filter-container">
-                <form method="GET" id="dtrFilters" class="filter-form-custom row g-2 align-items-end">
-                    <div class="col-6 col-md-1">
+                <form method="GET" id="dtrFilters" class="filter-form-custom row g-2 align-items-end d-flex justify-content-center">
+                    <div class="col-6 col-md-2">
                         <label for="monthFilter" class="form-label">Month</label>
                         <select class="form-select" id="monthFilter" name="month">
                             <option value="01" <?php echo $month == '01' ? 'selected' : ''; ?>>January</option>
@@ -243,7 +260,7 @@ $monthName = date('F', strtotime("$year-$month-01"));
                             <option value="12" <?php echo $month == '12' ? 'selected' : ''; ?>>December</option>
                         </select>
                     </div>
-                    <div class="col-6 col-md-2">
+                    <div class="col-6 col-md-1">
                         <label for="yearFilter" class="form-label">Year</label>
                         <select class="form-select" id="yearFilter" name="year">
                             <?php for($i = date('Y'); $i >= date('Y')-5; $i--): ?>
@@ -259,7 +276,7 @@ $monthName = date('F', strtotime("$year-$month-01"));
                             <option value="all" <?php echo $datePeriod == 'all' ? 'selected' : ''; ?>>Whole Month</option>
                         </select>
                     </div>
-                    <div class="col-6 col-md-3">
+                    <div class="col-6 col-md-2">
                         <label for="locationFilter" class="form-label">Location</label>
                         <select class="form-select" id="locationFilter" name="location">
                             <option value="">All Locations</option>
@@ -358,25 +375,63 @@ $monthName = date('F', strtotime("$year-$month-01"));
                         $guardName = $guard['First_Name'] . ' ' . (!empty($guard['middle_name']) ? $guard['middle_name'] . ' ' : '') . $guard['Last_Name'];
                         $location = $guard['location_name'] ? $guard['location_name'] : 'Not Assigned';
                         
-                        // Get attendance records for this guard
-                        $attendanceQuery = "
-                            SELECT 
-                                a.ID,
-                                DATE(a.Time_In) as date,
-                                a.Time_In as time_in,
-                                a.Time_Out as time_out,
-                                CASE 
-                                    WHEN a.Time_Out IS NULL THEN 0 
-                                    ELSE TIMESTAMPDIFF(HOUR, a.Time_In, a.Time_Out)
-                                END as hours_worked_raw
-                            FROM attendance a
-                            WHERE a.User_ID = ?
-                            AND DATE(a.Time_In) BETWEEN ? AND ?
-                            ORDER BY a.Time_In DESC
-                        ";
-                        
-                        $attendanceStmt = $conn->prepare($attendanceQuery);
-                        $attendanceStmt->execute([$guardId, $startDate, $endDate]);
+                                                // Build guard name variants for matching in activity logs (with and without middle name)
+                                                $guardNameNoMiddle = $guard['First_Name'] . ' ' . $guard['Last_Name'];
+
+                                                // Get attendance records for this guard, inferring manual-entry author via nearest matching activity log
+                                                $attendanceQuery = "
+                                                        SELECT 
+                                                                a.ID,
+                                                                DATE(a.Time_In) as date,
+                                                                a.Time_In as time_in,
+                                                                a.Time_Out as time_out,
+                                                                a.Latitude,
+                                                                a.Longitude,
+                                                                a.Time_Out_Latitude,
+                                                                a.Time_Out_Longitude,
+                                                                a.verification_image_path,
+                                                                a.Time_Out_Image,
+                                                                a.face_verified,
+                                                                a.Created_At,
+                                                                CASE 
+                                                                        WHEN a.Time_Out IS NULL THEN 0 
+                                                                        ELSE TIMESTAMPDIFF(HOUR, a.Time_In, a.Time_Out)
+                                                                END as hours_worked_raw,
+                                                                CASE 
+                                                                        WHEN a.verification_image_path IS NULL AND a.Latitude IS NULL THEN 'Manual'
+                                                                        ELSE 'Facial Recognition'
+                                                                END as entry_method,
+                                                                (
+                                                                        SELECT CONCAT(u1.First_Name, ' ', u1.Last_Name)
+                                                                        FROM activity_logs al1
+                                                                        JOIN users u1 ON u1.User_ID = al1.User_ID
+                                                                        WHERE al1.Activity_Type = 'Attendance Add'
+                                                                            AND (
+                                                                                al1.Activity_Details LIKE CONCAT('% for ', ?, '%')
+                                                                                OR al1.Activity_Details LIKE CONCAT('% for ', ?, '%')
+                                                                            )
+                                                                        ORDER BY ABS(TIMESTAMPDIFF(MINUTE, COALESCE(a.Created_At, a.Time_In), al1.Timestamp)) ASC
+                                                                        LIMIT 1
+                                                                ) as added_by_name,
+                                                                (
+                                                                        SELECT al2.Timestamp
+                                                                        FROM activity_logs al2
+                                                                        WHERE al2.Activity_Type = 'Attendance Add'
+                                                                            AND (
+                                                                                al2.Activity_Details LIKE CONCAT('% for ', ?, '%')
+                                                                                OR al2.Activity_Details LIKE CONCAT('% for ', ?, '%')
+                                                                            )
+                                                                        ORDER BY ABS(TIMESTAMPDIFF(MINUTE, COALESCE(a.Created_At, a.Time_In), al2.Timestamp)) ASC
+                                                                        LIMIT 1
+                                                                ) as added_timestamp
+                                                        FROM attendance a
+                                                        WHERE a.User_ID = ?
+                                                            AND DATE(a.Time_In) BETWEEN ? AND ?
+                                                        ORDER BY a.Time_In DESC
+                                                ";
+
+                                                $attendanceStmt = $conn->prepare($attendanceQuery);
+                                                $attendanceStmt->execute([$guardName, $guardNameNoMiddle, $guardName, $guardNameNoMiddle, $guardId, $startDate, $endDate]);
                         
                         // Calculate total hours
                         $totalHoursQuery = "
@@ -415,6 +470,12 @@ $monthName = date('F', strtotime("$year-$month-01"));
                                 </div>
                             </div>
                             <div class="table-responsive">
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="material-icons text-primary" style="font-size: 14px;">face</i> Facial Recognition &nbsp;&nbsp;
+                                        <i class="material-icons text-warning" style="font-size: 14px;">person</i> Manual Entry
+                                    </small>
+                                </div>
                                 <table class="table table-striped table-hover">
                                     <thead>
                                         <tr>
@@ -429,6 +490,9 @@ $monthName = date('F', strtotime("$year-$month-01"));
                                         <?php
                                         if ($attendanceStmt->rowCount() > 0) {
                                             while ($record = $attendanceStmt->fetch(PDO::FETCH_ASSOC)) {
+                                                // Debug: Check what data we're getting
+                                                // echo "<!-- DEBUG: Guard: $guardName, Added By: " . ($record['added_by_name'] ?? 'NULL') . ", Entry Method: " . ($record['entry_method'] ?? 'NULL') . " -->";
+                                                
                                                 // Calculate hours properly for overnight shifts
                                                 $hoursWorked = 0;
                                                 $timeInObj = new DateTime($record['time_in']);
@@ -458,19 +522,62 @@ $monthName = date('F', strtotime("$year-$month-01"));
                                                 ?>
                                                 <tr>
                                                     <td><?php echo $dateDisplay; ?></td>
-                                                    <td><?php echo date('h:i A', strtotime($record['time_in'])); ?></td>
                                                     <td>
-                                                        <?php echo $record['time_out'] ? date('h:i A', strtotime($record['time_out'])) : 'Not yet logged out'; ?>
+                                                        <?php echo date('h:i A', strtotime($record['time_in'])); ?>
+                                                        <?php if ($record['entry_method'] === 'Manual'): ?>
+                                                            <small class="text-warning ms-1" title="Manual Entry">
+                                                                <i class="material-icons" style="font-size: 14px;">person</i>
+                                                            </small>
+                                                        <?php else: ?>
+                                                            <small class="text-primary ms-1" title="Facial Recognition">
+                                                                <i class="material-icons" style="font-size: 14px;">face</i>
+                                                            </small>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ($record['time_out']): ?>
+                                                            <?php echo date('h:i A', strtotime($record['time_out'])); ?>
+                                                            <?php if ($record['entry_method'] === 'Manual'): ?>
+                                                                <small class="text-warning ms-1" title="Manual Entry">
+                                                                    <i class="material-icons" style="font-size: 14px;">person</i>
+                                                                </small>
+                                                            <?php else: ?>
+                                                                <small class="text-primary ms-1" title="Facial Recognition">
+                                                                    <i class="material-icons" style="font-size: 14px;">face</i>
+                                                                </small>
+                                                            <?php endif; ?>
+                                                        <?php else: ?>
+                                                            Not yet logged out
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td><?php echo $hoursWorked; ?> hours</td>
                                                     <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-info view-attendance me-1" 
+                                                                data-id="<?php echo $record['ID']; ?>"
+                                                                data-guard-name="<?php echo htmlspecialchars($guardName); ?>"
+                                                                data-date="<?php echo $dateDisplay; ?>"
+                                                                data-timein="<?php echo date('h:i A', strtotime($record['time_in'])); ?>"
+                                                                data-timeout="<?php echo $record['time_out'] ? date('h:i A', strtotime($record['time_out'])) : 'Not yet logged out'; ?>"
+                                                                data-latitude="<?php echo $record['Latitude'] ?? ''; ?>"
+                                                                data-longitude="<?php echo $record['Longitude'] ?? ''; ?>"
+                                                                data-timeout-latitude="<?php echo $record['Time_Out_Latitude'] ?? ''; ?>"
+                                                                data-timeout-longitude="<?php echo $record['Time_Out_Longitude'] ?? ''; ?>"
+                                                                data-timein-image="<?php echo $record['verification_image_path'] ?? ''; ?>"
+                                                                data-timeout-image="<?php echo $record['Time_Out_Image'] ?? ''; ?>"
+                                                                data-entry-method="<?php echo $record['entry_method'] ?? 'Unknown'; ?>"
+                                                                data-face-verified="<?php echo $record['face_verified'] ?? 0; ?>"
+                                                                data-added-by="<?php echo $record['added_by_name'] ?? ''; ?>"
+                                                                data-added-timestamp="<?php echo $record['added_timestamp'] ?? ''; ?>"
+                                                                title="View Attendance Details">
+                                                            <i class="material-icons">visibility</i>
+                                                        </button>
                                                         <button type="button" class="btn btn-sm btn-success add-attendance me-1" 
                                                                 data-guard-id="<?php echo $guardId; ?>"
                                                                 data-guard-name="<?php echo htmlspecialchars($guardName); ?>"
                                                                 title="Add New Attendance">
                                                             <i class="material-icons">add</i>
                                                         </button>
-                                                        <button type="button" class="btn btn-sm btn-primary edit-attendance" 
+                                                        <button type="button" class="btn btn-sm btn-primary edit-attendance me-1" 
                                                                 data-id="<?php echo $record['ID']; ?>"
                                                                 data-timein="<?php echo date('Y-m-d\TH:i', strtotime($record['time_in'])); ?>"
                                                                 data-timeout="<?php echo $record['time_out'] ? date('Y-m-d\TH:i', strtotime($record['time_out'])) : ''; ?>">
@@ -624,6 +731,121 @@ $monthName = date('F', strtotime("$year-$month-01"));
         </div>
     </div>
 
+    <!-- View Attendance Details Modal -->
+    <div class="modal fade view-attendance-modal" id="viewAttendanceModal" tabindex="-1" aria-labelledby="viewAttendanceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewAttendanceModalLabel">
+                        <i class="material-icons me-2">visibility</i>Attendance Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <div class="alert alert-info">
+                                <strong>Guard:</strong> <span id="viewGuardName"></span><br>
+                                <strong>Date:</strong> <span id="viewDate"></span><br>
+                                <strong>Entry Method:</strong> <span id="viewEntryMethod" class="badge"></span><br>
+                                <div id="viewManualEntryDetails" style="display: none; margin-top: 10px;">
+                                    <strong>Added by:</strong> <span id="viewAddedBy"></span><br>
+                                    <strong>Added on:</strong> <span id="viewAddedTimestamp"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Time In Details -->
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="material-icons me-2">login</i>Time In Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Time:</strong> <span id="viewTimeIn"></span></p>
+                                    <p><strong>Location:</strong><br>
+                                        <span id="viewTimeInLocation">
+                                            <span id="viewLatitude"></span>, <span id="viewLongitude"></span>
+                                            <br>
+                                            <a href="#" id="viewTimeInMapLink" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                                <i class="material-icons me-1">map</i>View on Google Maps
+                                            </a>
+                                        </span>
+                                    </p>
+                                    <div class="text-center">
+                                        <p><strong>Photo:</strong></p>
+                                        <img id="viewTimeInImage" src="" alt="Time In Photo" class="img-fluid rounded shadow" 
+                                             style="max-height: 200px; cursor: pointer;" onclick="openImageModal(this.src)">
+                                        <div id="viewTimeInNoImage" class="text-muted" style="display: none;">
+                                            <i class="material-icons" style="font-size: 48px;">no_photography</i><br>
+                                            No photo available
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Time Out Details -->
+                        <div class="col-md-6">
+                            <div class="card border-danger">
+                                <div class="card-header bg-danger text-white">
+                                    <h6 class="mb-0"><i class="material-icons me-2">logout</i>Time Out Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Time:</strong> <span id="viewTimeOut"></span></p>
+                                    <div id="viewTimeOutDetails">
+                                        <p><strong>Location:</strong><br>
+                                            <span id="viewTimeOutLocation">
+                                                <span id="viewTimeOutLatitude"></span>, <span id="viewTimeOutLongitude"></span>
+                                                <br>
+                                                <a href="#" id="viewTimeOutMapLink" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                                    <i class="material-icons me-1">map</i>View on Google Maps
+                                                </a>
+                                            </span>
+                                        </p>
+                                        <div class="text-center">
+                                            <p><strong>Photo:</strong></p>
+                                            <img id="viewTimeOutImage" src="" alt="Time Out Photo" class="img-fluid rounded shadow" 
+                                                 style="max-height: 200px; cursor: pointer;" onclick="openImageModal(this.src)">
+                                            <div id="viewTimeOutNoImage" class="text-muted" style="display: none;">
+                                                <i class="material-icons" style="font-size: 48px;">no_photography</i><br>
+                                                No photo available
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="viewTimeOutPending" class="text-center text-muted" style="display: none;">
+                                        <i class="material-icons" style="font-size: 48px;">schedule</i><br>
+                                        Guard hasn't logged out yet
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Zoom Modal -->
+    <div class="modal fade" id="imageZoomModal" tabindex="-1" aria-labelledby="imageZoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageZoomModalLabel">Attendance Photo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="zoomedImage" src="" alt="Zoomed Attendance Photo" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SWAL Alerts for Profile Picture -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -659,7 +881,8 @@ $monthName = date('F', strtotime("$year-$month-01"));
             const currentImage = document.getElementById('currentProfileImage');
             
             // Listen for file selection
-            profilePicInput.addEventListener('change', function() {
+            if (profilePicInput) {
+                profilePicInput.addEventListener('change', function() {
                 const file = this.files[0];
                 
                 // Check if a file was selected
@@ -692,6 +915,7 @@ $monthName = date('F', strtotime("$year-$month-01"));
                     }
                 }
             });
+            }
         });
     </script>
 
@@ -746,6 +970,8 @@ $monthName = date('F', strtotime("$year-$month-01"));
 
     <script>
 $(document).ready(function() {
+    console.log('Document ready - jQuery loaded successfully');
+    
     // Build export URL with current filters
     function buildExportUrl(type){
         const params = new URLSearchParams();
@@ -766,17 +992,133 @@ $(document).ready(function() {
     }
 
     $('#exportPdfBtn').on('click', function(){
+        console.log('PDF export clicked');
         const url = buildExportUrl('pdf');
+        console.log('PDF URL:', url);
         window.open(url, '_blank');
     });
     $('#exportExcelBtn').on('click', function(){
+        console.log('Excel export clicked');
         const url = buildExportUrl('excel');
+        console.log('Excel URL:', url);
         window.open(url, '_blank');
     });
     // Removed: PDF by Location and ZIP per Guard options
 
+    // View attendance button click
+    $(document).on('click', '.view-attendance', function() {
+        console.log('View attendance button clicked');
+        const guardName = $(this).data('guard-name');
+        const date = $(this).data('date');
+        const timeIn = $(this).data('timein');
+        const timeOut = $(this).data('timeout');
+        const latitude = $(this).data('latitude');
+        const longitude = $(this).data('longitude');
+        const timeOutLatitude = $(this).data('timeout-latitude');
+        const timeOutLongitude = $(this).data('timeout-longitude');
+        const timeInImage = $(this).data('timein-image');
+        const timeOutImage = $(this).data('timeout-image');
+        const entryMethod = $(this).data('entry-method');
+        const faceVerified = $(this).data('face-verified');
+        const addedBy = $(this).data('added-by');
+        const addedTimestamp = $(this).data('added-timestamp');
+        
+        // console.log('DEBUG: Entry Method:', entryMethod, 'Added By:', addedBy, 'Added Timestamp:', addedTimestamp);
+        
+        // Populate modal with data
+        $('#viewGuardName').text(guardName);
+        $('#viewDate').text(date);
+        $('#viewTimeIn').text(timeIn);
+        $('#viewTimeOut').text(timeOut);
+        
+        // Handle entry method badge
+        const entryBadge = $('#viewEntryMethod');
+        if (entryMethod === 'Manual') {
+            entryBadge.removeClass('badge-primary').addClass('badge-warning').text('Manual Entry');
+            // Show manual entry details if available
+            if (addedBy) {
+                $('#viewAddedBy').text(addedBy);
+                if (addedTimestamp) {
+                    const timestamp = new Date(addedTimestamp);
+                    $('#viewAddedTimestamp').text(timestamp.toLocaleString());
+                } else {
+                    $('#viewAddedTimestamp').text('Not available');
+                }
+                $('#viewManualEntryDetails').show();
+            } else {
+                $('#viewManualEntryDetails').hide();
+            }
+        } else {
+            entryBadge.removeClass('badge-warning').addClass('badge-primary').text('Facial Recognition');
+            $('#viewManualEntryDetails').hide();
+        }
+        
+        // Handle Time In location and image based on entry method
+        if (entryMethod === 'Manual') {
+            // For manual entries, show that location wasn't captured
+            $('#viewTimeInLocation').html('<span class="text-muted"><i class="material-icons me-1">location_off</i>Location not captured (Manual Entry)</span>').show();
+            $('#viewTimeInImage').hide();
+            $('#viewTimeInNoImage').html('<i class="material-icons" style="font-size: 48px;">person</i><br>Manual Entry<br><small class="text-muted">No photo required</small>').show();
+        } else {
+            // For facial recognition entries, show GPS and photo data
+            if (latitude && longitude) {
+                $('#viewLatitude').text(latitude);
+                $('#viewLongitude').text(longitude);
+                $('#viewTimeInMapLink').attr('href', `https://www.google.com/maps?q=${latitude},${longitude}`);
+                $('#viewTimeInLocation').show();
+            } else {
+                $('#viewTimeInLocation').hide();
+            }
+            
+            if (timeInImage) {
+                $('#viewTimeInImage').attr('src', timeInImage).show();
+                $('#viewTimeInNoImage').hide();
+            } else {
+                $('#viewTimeInImage').hide();
+                $('#viewTimeInNoImage').show();
+            }
+        }
+        
+        // Handle Time Out details
+        if (timeOut !== 'Not yet logged out') {
+            $('#viewTimeOutDetails').show();
+            $('#viewTimeOutPending').hide();
+            
+            if (entryMethod === 'Manual') {
+                // For manual entries, show that location wasn't captured
+                $('#viewTimeOutLocation').html('<span class="text-muted"><i class="material-icons me-1">location_off</i>Location not captured (Manual Entry)</span>').show();
+                $('#viewTimeOutImage').hide();
+                $('#viewTimeOutNoImage').html('<i class="material-icons" style="font-size: 48px;">person</i><br>Manual Entry<br><small class="text-muted">No photo required</small>').show();
+            } else {
+                // For facial recognition entries, show GPS and photo data
+                if (timeOutLatitude && timeOutLongitude) {
+                    $('#viewTimeOutLatitude').text(timeOutLatitude);
+                    $('#viewTimeOutLongitude').text(timeOutLongitude);
+                    $('#viewTimeOutMapLink').attr('href', `https://www.google.com/maps?q=${timeOutLatitude},${timeOutLongitude}`);
+                    $('#viewTimeOutLocation').show();
+                } else {
+                    $('#viewTimeOutLocation').hide();
+                }
+                
+                if (timeOutImage) {
+                    $('#viewTimeOutImage').attr('src', timeOutImage).show();
+                    $('#viewTimeOutNoImage').hide();
+                } else {
+                    $('#viewTimeOutImage').hide();
+                    $('#viewTimeOutNoImage').show();
+                }
+            }
+        } else {
+            $('#viewTimeOutDetails').hide();
+            $('#viewTimeOutPending').show();
+        }
+        
+        $('#viewAttendanceModal').modal('show');
+    });
+
     // Edit attendance button click
-    $('.edit-attendance').click(function() {
+    $(document).on('click', '.edit-attendance', function() {
+        console.log('Edit attendance button clicked');
         const id = $(this).data('id');
         const timeIn = $(this).data('timein');
         const timeOut = $(this).data('timeout');
@@ -855,7 +1197,8 @@ $(document).ready(function() {
     });
     
     // Archive attendance button click
-    $('.archive-attendance').click(function() {
+    $(document).on('click', '.archive-attendance', function() {
+        console.log('Archive attendance button clicked');
         const id = $(this).data('id');
         $('#archiveAttendanceId').val(id);
         $('#archiveReason').val('');
@@ -922,10 +1265,10 @@ $(document).ready(function() {
             }
         });
     });
-});
 
- // Add attendance button click
+    // Add attendance button click
     $(document).on('click', '.add-attendance', function() {
+        console.log('Add attendance button clicked');
         const guardId = $(this).data('guard-id');
         const guardName = $(this).data('guard-name');
         
@@ -1034,6 +1377,13 @@ $(document).ready(function() {
         $('#addAttendanceForm')[0].reset();
         $('#saveNewAttendanceBtn').prop('disabled', false).html('<i class="material-icons me-1">save</i> Add Attendance');
     });
+});
+
+// Function to open image in zoom modal (outside jQuery ready)
+function openImageModal(imageSrc) {
+    $('#zoomedImage').attr('src', imageSrc);
+    $('#imageZoomModal').modal('show');
+}
 </script>
 </body>
 </html>

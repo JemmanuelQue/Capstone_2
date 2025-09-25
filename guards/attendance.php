@@ -1069,15 +1069,11 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
                     return;
                 }
 
-                // Verify location
+                // Verify location (allowing all locations)
                 try {
                     const locationResult = await verifyLocation();
-                    if (!locationResult.valid) {
-                        showStatus(locationResult.message, false);
-                        if (timeInBtn) timeInBtn.disabled = false;
-                        if (timeOutBtn) timeOutBtn.disabled = false;
-                        return;
-                    }
+                    // Location verification bypassed - all locations allowed
+                    console.log('Location obtained:', locationResult);
                     
                     // Take a snapshot with explicit dimensions
                     const video = document.getElementById('video');

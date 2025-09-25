@@ -20,6 +20,12 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
 } else {
     $hrProfile = '../images/default_profile.png';
 }
+
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
 ?>
 
 
@@ -136,7 +142,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     <!-- Filter Section -->
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
-            <form id="filterForm" method="GET">
+            <form id="filterForm" method="GET" class="d-flex justify-content-center">
                 <div class="row g-2">
                     <div class="col-md-2">
                         <label for="start_date" class="form-label">Start Date</label>
@@ -168,8 +174,8 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                         </select>
                     </div>
                      <div class="col-md-2">
-                        <label for="guard_name" class="form-label">Guard Name</label>
-                        <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Search by guard name"
+                        <label for="guard_name" class="form-label text-nowrap">Search Guard Name</label>
+                        <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Enter name..."
                                value="<?php echo isset($_GET['guard_name']) ? htmlspecialchars($_GET['guard_name']) : ''; ?>">
                     </div>        
                     <div class="col-md-2 d-flex align-items-end">
@@ -266,7 +272,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
             if (count($leaveRequests) == 0) {
                 echo '<div class="alert alert-info">
                     <i class="material-icons align-middle me-2">info</i>
-                    No leave requests found.
+                    No leave requests found for this month.
                 </div>';
             } else {
             ?>
@@ -280,9 +286,8 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">description</i>REASON</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">date_range</i>PERIOD</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">schedule</i>REQUEST DATE</th>
-                        <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">info</i>STATUS</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">comment</i>REJECTION REASON</th>
-                        <th class="fw-bold text-center"><i class="material-icons align-middle me-1" style="font-size: 18px;">settings</i>ACTION</th>
+                        <th class="fw-bold text-center"><i class="material-icons align-middle me-1" style="font-size: 18px;">info</i>STATUS</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -370,11 +375,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                 </div>
                             </td>
                             <td><?php echo date('M d, Y', strtotime($request['Request_Date'])); ?></td>
-                            <td>
-                                <span class="status-badge status-<?php echo strtolower($request['Status']); ?>">
-                                    <?php echo $request['Status']; ?>
-                                </span>
-                            </td>
                             <td style="min-width: 250px; max-width: 350px;">
                                 <?php if($request['Status'] === 'Rejected' && !empty($request['rejection_reason'])): ?>
                                     <div class="text-wrap" style="word-break: break-word; line-height: 1.4;">
@@ -385,9 +385,9 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
                             </td>
-                            <td>
-                                <?php if($request['Status'] === 'Pending'): ?>
-                                    <div class="d-flex gap-2">
+                            <td class="text-center">
+                                <?php if (isset($request['Status']) && strcasecmp(trim($request['Status']), 'Pending') === 0): ?>
+                                    <div class="d-inline-flex gap-2 align-items-center">
                                         <button class="btn btn-success btn-sm accept-btn" 
                                             data-request-id="<?php echo $request['ID']; ?>"
                                             data-guard-name="<?php echo htmlspecialchars($request['First_Name']) . ' ' . 
@@ -396,7 +396,8 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                             data-leave-type="<?php echo ucfirst($request['Leave_Type']); ?>"
                                             data-period="<?php echo $startDateFormatted . ($startDateFormatted != $endDateFormatted ? " - " . $endDateFormatted : ""); ?>"
                                             data-location="<?php echo htmlspecialchars($request['location_name'] ?? 'N/A'); ?>">
-                                            <i class="material-icons">check</i> 
+                                            <i class="material-icons">check</i>
+                                        </button>
                                         <button class="btn btn-danger btn-sm reject-btn" 
                                             data-bs-toggle="modal" 
                                             data-bs-target="#rejectModal"
@@ -422,7 +423,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                             Rejected
                                         </span>
                                     <?php else: ?>
-                                        <span class="text-muted">No action needed</span>
+                                        <span class="status-badge status-<?php echo strtolower($request['Status']); ?>"><?php echo $request['Status']; ?></span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
@@ -483,26 +484,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     <!-- SWAL Alerts for Profile Picture -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            <?php if(isset($_SESSION['profilepic_success'])): ?>
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: '<?php echo $_SESSION['profilepic_success']; ?>',
-                    confirmButtonColor: '#2a7d4f'
-                });
-                <?php unset($_SESSION['profilepic_success']); ?>
-            <?php endif; ?>
-
-            <?php if(isset($_SESSION['profilepic_error'])): ?>
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: '<?php echo $_SESSION['profilepic_error']; ?>',
-                    confirmButtonColor: '#dc3545'
-                });
-                <?php unset($_SESSION['profilepic_error']); ?>
-            <?php endif; ?>
-
             // Leave request success/error messages
             <?php if(isset($_SESSION['leave_success'])): ?>
                 Swal.fire({
@@ -523,52 +504,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                 });
                 <?php unset($_SESSION['leave_error']); ?>
             <?php endif; ?>
-        });
-    </script>
-
-    <!-- Profile Picture Preview Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get the file input and preview image elements
-            const profilePicInput = document.getElementById('profilePic');
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            const previewImage = document.getElementById('imagePreview');
-            const currentImage = document.getElementById('currentProfileImage');
-            
-            // Listen for file selection
-            profilePicInput.addEventListener('change', function() {
-                const file = this.files[0];
-                
-                // Check if a file was selected
-                if (file) {
-                    // Show the preview container
-                    previewContainer.style.display = 'block';
-                    
-                    // Hide the current image
-                    if (currentImage) {
-                        currentImage.style.display = 'none';
-                    }
-                    
-                    // Create a FileReader to read the image
-                    const reader = new FileReader();
-                    
-                    // Set up the FileReader onload event
-                    reader.onload = function(e) {
-                        // Set the preview image source to the loaded data URL
-                        previewImage.src = e.target.result;
-                    }
-                    
-                    // Read the file as a data URL
-                    reader.readAsDataURL(file);
-                    
-                } else {
-                    // If no file selected or selection canceled, show current image
-                    previewContainer.style.display = 'none';
-                    if (currentImage) {
-                        currentImage.style.display = 'block';
-                    }
-                }
-            });
         });
     </script>
 
@@ -726,11 +661,30 @@ $(document).ready(function() {
         var table = $('#leaveRequestsTable').DataTable({
             pageLength: 10,
             lengthMenu: [10, 25, 50, 100],
-            order: [[5, 'desc']], // Request Date column
+            order: [[5, 'desc']], // Request Date column (index unchanged)
             columnDefs: [
-                { orderable: false, targets: [2, 3, 8] } // Type, Reason, Action
+                { orderable: false, targets: [2, 3, 7] }, // Type, Reason, Status/Actions (last column)
+                { className: 'text-center', targets: [7] } // Center last column
             ],
-            dom: 'lrtip' // hide built-in search box
+            dom: 'lrtip', // hide built-in search box
+            // Turn on DataTables' horizontal scrolling so a native scrollbar appears
+            scrollX: true,
+            scrollCollapse: true,
+            responsive: false, // keep layout stable
+            autoWidth: false, // we'll control widths via CSS
+            fixedColumns: false,
+            initComplete: function() {
+                // Adjust columns after initialization to ensure header/body alignment
+                const api = this.api();
+                api.columns.adjust();
+                // A small delayed adjust helps after fonts/images load
+                setTimeout(function(){ api.columns.adjust(); }, 150);
+            }
+        });
+
+        // Re-adjust on window resize to keep header/body aligned
+        $(window).on('resize.leaves.dt', function(){
+            table.columns.adjust();
         });
 
         // Bind Guard Name input to column 0 search

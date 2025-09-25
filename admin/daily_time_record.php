@@ -43,6 +43,12 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     $adminProfile = '../images/default_profile.png';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Determine date range based on period
 if ($datePeriod == '1-15') {
     $startDate = "$year-$month-01";

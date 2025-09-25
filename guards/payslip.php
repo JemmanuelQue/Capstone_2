@@ -15,6 +15,12 @@ if (empty($profileData['Profile_Pic']) || !file_exists($profileData['Profile_Pic
     $profileData['Profile_Pic'] = '../images/default_profile.png';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Get current date info for filtering
 $currentYear = date('Y');
 $currentMonth = date('n'); // 1-12 numeric representation

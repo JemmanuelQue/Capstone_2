@@ -14,6 +14,12 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Date helpers with optional month filter (?month=YYYY-MM)
 $selectedYm = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', $_GET['month']) ? $_GET['month'] : date('Y-m');
 $monthStart = date('Y-m-01', strtotime($selectedYm . '-01'));

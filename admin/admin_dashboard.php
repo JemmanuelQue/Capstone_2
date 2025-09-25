@@ -15,6 +15,12 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Date range filter logic (same as accounting dashboard)
 $filterYear = $_GET['year'] ?? date('Y');
 $filterMonth = $_GET['month'] ?? '';
@@ -313,8 +319,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
         
         <!-- Dashboard Content -->
         <div class="container-fluid mt-4">
-            <h1 class="mb-4"><center>Welcome Admin!</center></h1><br>
-            
+        
             <!-- Date Range Filter Form -->
             <div class="row mb-4">
                 <div class="col-12">
@@ -357,7 +362,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">&nbsp;</label>
-                                    <button type="submit" class="btn btn-primary w-100" id="filterBtn">
+                                    <button type="submit" class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-1" id="filterBtn">
                                         <span class="material-icons">search</span>
                                         Filter Analytics
                                     </button>
@@ -501,8 +506,8 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                             </div>
                             
                             <div class="text-center mt-4 mb-3">
-                                <a href="payroll.php" class="btn btn-success">
-                                    <span class="material-icons">payments</span> View Full Payroll
+                                <a href="payroll.php" class="btn btn-success d-inline-flex align-items-center justify-content-center gap-1">
+                                    <span class="material-icons ">payments</span> View Full Payroll
                                 </a>
                             </div>
                         </div>

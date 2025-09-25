@@ -21,6 +21,12 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     $hrProfile = '../images/default_profile.png';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Role mapping: include multiple roles (adjust labels as needed)
 // Example roles: 1=Super Admin,2=Admin?,3=HR,5=Guard (adjust per actual schema)
 $roleMap = [

@@ -116,6 +116,76 @@ body {
     border-top: none;
 }
 
+/* Horizontal scroll indicator for mobile */
+@media (max-width: 991px) {
+    .table-responsive::after {
+        content: "← Scroll horizontally to see more →";
+        position: sticky;
+        right: 0;
+        bottom: 0;
+        background: rgba(42, 125, 79, 0.9);
+        color: white;
+        padding: 8px 16px;
+        font-size: 12px;
+        text-align: center;
+        z-index: 10;
+        border-radius: 4px 4px 0 0;
+        animation: fadeInOut 3s ease-in-out infinite;
+        display: block;
+        width: 100%;
+    }
+    
+    @keyframes fadeInOut {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+    }
+    
+    .table-responsive:hover::after {
+        display: none;
+    }
+}
+
+/* Add scrollbar styling for better visibility */
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: #2a7d4f #e0e0e0;
+}
+
+.table-responsive::-webkit-scrollbar {
+    height: 10px; /* Make scrollbar more visible on desktop */
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #e0e0e0;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #2a7d4f;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #1e5d3a;
+}
+
+/* Add horizontal scroll indicator for desktop too */
+@media (min-width: 992px) {
+    .table-responsive::before {
+        content: "Table is horizontally scrollable";
+        position: absolute;
+        top: -25px;
+        right: 0;
+        background: rgba(42, 125, 79, 0.1);
+        color: #2a7d4f;
+        padding: 4px 12px;
+        font-size: 11px;
+        border-radius: 4px;
+        z-index: 5;
+        font-weight: 500;
+    }
+}
+
 /* Period column specific styling */
 .period-cell {
     min-width: 220px !important;
@@ -449,13 +519,33 @@ body {
 .table-responsive {
     margin: 0;
     border-radius: 8px;
-    overflow: hidden;
+    overflow-x: auto !important;
+    overflow-y: visible;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100% !important;
+    width: 100% !important;
+    display: block !important;
 }
 
 table.table {
     margin-bottom: 0;
     border-collapse: collapse;
-    width: 100%;
+    width: auto !important; /* Force auto width */
+    min-width: 1800px !important; /* Increase minimum width for desktop to force scrolling */
+    table-layout: auto !important; /* Force auto layout */
+    max-width: none !important; /* Remove any max-width constraints */
+}
+
+/* Force DataTables to not compress table */
+.dataTables_wrapper {
+    width: 100% !important;
+    overflow-x: auto !important;
+}
+
+.dataTables_wrapper table {
+    width: auto !important;
+    min-width: 1800px !important;
 }
 
 .table thead th {
@@ -466,6 +556,37 @@ table.table {
     text-transform: uppercase;
     padding: 12px 15px;
     border-bottom: none;
+    white-space: nowrap; /* Prevent header text wrapping */
+    vertical-align: middle; /* keep header text vertically centered */
+}
+
+/* Define specific column widths for better table layout (8 columns; Status/Actions last) */
+.table thead th:nth-child(1) { min-width: 220px !important; width: 220px !important; } /* GUARD NAME */
+.table thead th:nth-child(2) { min-width: 160px !important; width: 160px !important; } /* LOCATION */
+.table thead th:nth-child(3) { min-width: 130px !important; width: 130px !important; } /* TYPE */
+.table thead th:nth-child(4) { min-width: 320px !important; width: 320px !important; } /* REASON */
+.table thead th:nth-child(5) { min-width: 220px !important; width: 220px !important; } /* PERIOD */
+.table thead th:nth-child(6) { min-width: 160px !important; width: 160px !important; } /* REQUEST DATE */
+.table thead th:nth-child(7) { min-width: 280px !important; width: 280px !important; } /* REJECTION REASON */
+.table thead th:nth-child(8) { min-width: 180px !important; width: 180px !important; } /* STATUS/ACTIONS */
+
+/* Apply same widths to table body cells */
+.table tbody td:nth-child(1) { min-width: 220px !important; width: 220px !important; }
+.table tbody td:nth-child(2) { min-width: 160px !important; width: 160px !important; }
+.table tbody td:nth-child(3) { min-width: 130px !important; width: 130px !important; }
+.table tbody td:nth-child(4) { min-width: 320px !important; width: 320px !important; }
+.table tbody td:nth-child(5) { min-width: 220px !important; width: 220px !important; }
+.table tbody td:nth-child(6) { min-width: 160px !important; width: 160px !important; }
+.table tbody td:nth-child(7) { min-width: 280px !important; width: 280px !important; }
+.table tbody td:nth-child(8) { min-width: 180px !important; width: 180px !important; }
+
+.table tbody td {
+    padding: 12px 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #eaeaea;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 
@@ -484,6 +605,20 @@ table.table {
 .table-hover tbody tr:hover {
     background-color: #eef5f0 !important; /* Light green on hover */
     transition: background-color 0.2s ease;
+}
+
+/* Allow text wrapping for specific columns that need it */
+.table tbody td:nth-child(4), /* REASON column */
+.table tbody td:nth-child(7) { /* REJECTION REASON column */
+    white-space: normal !important;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* Center the last column (Status/Actions) */
+.table thead th:nth-child(8),
+.table tbody td:nth-child(8) {
+    text-align: center;
 }
 
 /* Improve the period cell layout */
@@ -661,6 +796,29 @@ table.table {
     font-size: 12px;
 }
 
+/* Desktop and tablet horizontal scrolling */
+@media (min-width: 992px) {
+    .table-responsive {
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100% !important;
+        width: 100% !important;
+        display: block !important;
+    }
+    
+    table.table {
+        min-width: 1880px !important; /* Total: 220+160+130+320+220+160+130+280+160 */
+        width: auto !important;
+    }
+    
+    .dataTables_wrapper table {
+        min-width: 1880px !important;
+        width: auto !important;
+    }
+}
+
 /* Update the responsive styles */
 @media (max-width: 991px) {
     /* Hide sidebar on mobile */
@@ -705,58 +863,59 @@ table.table {
         display: inline-block !important; 
     }
 
-    /* Ensure STATUS column is visible */
+    /* Enhanced table scrolling for mobile */
     .table-responsive {
-        overflow-x: visible;
+        overflow-x: auto !important;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 8px;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+        max-width: 100vw !important;
+        width: 100% !important;
+        display: block !important;
     }
     
-    /* Reorganize table on mobile */
+    /* Ensure table maintains minimum width on mobile */
+    table.table {
+        min-width: 1600px !important; /* Force horizontal scroll on mobile */
+        width: auto !important;
+    }
+    
+    .dataTables_wrapper table {
+        min-width: 1600px !important;
+        width: auto !important;
+    }
+    
+    /* Compact table styling for mobile */
     .table thead th,
     .table tbody td {
-        padding: 8px 4px !important;
-        font-size: 11px !important;
-        vertical-align: middle !important;
-        text-align: center !important;
+        padding: 8px 12px !important;
+        font-size: 12px !important;
     }
     
-    /* Adjust column widths on mobile */
-    .table thead th:nth-child(1), .table tbody td:nth-child(1) { width: 22%; } /* GUARD NAME */
-    .table thead th:nth-child(2), .table tbody td:nth-child(2) { width: 18%; } /* LEAVE TYPE */
-    .table thead th:nth-child(3), .table tbody td:nth-child(3) { width: 28%; } /* PERIOD */
-    .table thead th:nth-child(4), .table tbody td:nth-child(4) { width: 16%; } /* REQUEST DATE */
-    .table thead th:nth-child(5), .table tbody td:nth-child(5) { width: 16%; } /* STATUS */
-    
-    /* Make period more compact */
-    .period-cell {
-        max-width: 100px;
+    /* Better styling for badges on mobile */
+    .leave-type,
+    .status-badge{
+        padding: 4px 8px !important;
         font-size: 10px !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Compact buttons on mobile */
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    
+    /* Make period cell more compact */
+    .period-cell {
+        max-width: 140px;
+        font-size: 11px !important;
     }
     
     .days-count {
-        font-size: 10px !important;
+        font-size: 9px !important;
         margin-top: 2px !important;
-    }
-    
-    /* Better styling for status badge on mobile */
-    .leave-type,
-    .status-badge{
-        padding: 6px 12px !important;
-        font-size: 10px !important;
-        min-width: auto !important;
-        max-width: 100% !important;
-        white-space: normal !important;
-        display: inline-block !important;
-    }
-    
-    /* Optimize content for REQUEST DATE column */
-    .table tbody td:nth-child(4) {
-        white-space: nowrap;
-        font-size: 10px !important;
-    }
-    
-    .period-cell {
-        max-width: 180px;
-        margin: 0 auto;
     }
 }
 

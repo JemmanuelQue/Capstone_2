@@ -23,6 +23,12 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
     $hrProfile = '../images/default_profile.png';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
 // Fetch Roles for filters
 try {
     $rolesStmt = $conn->prepare("SELECT Role_ID, Role_Name FROM roles ORDER BY Role_Name");
@@ -123,6 +129,17 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
             margin-top: 0.25rem;
             font-size: 0.875em;
             color: #28a745;
+        }
+        
+        /* Employee type specific styling */
+        .govt-id-input.bg-light {
+            background-color: #f8f9fa !important;
+            cursor: not-allowed;
+        }
+        
+        /* Government ID indicator styling */
+        .badge .material-icons {
+            vertical-align: middle;
         }
     </style>
     
@@ -293,7 +310,7 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                 <div class="card-body">
                     <!-- Filters -->
                     <div class="row g-2 align-items-end mb-3">
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-3">
                             <label for="filterDepartment" class="form-label mb-1">Department</label>
                             <select id="filterDepartment" class="form-select form-select-sm">
                                 <option value="">All Departments</option>
@@ -304,7 +321,7 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-3">
                             <label for="filterStatus" class="form-label mb-1">Status</label>
                             <select id="filterStatus" class="form-select form-select-sm">
                                 <option value="">All Statuses</option>
@@ -312,7 +329,15 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                 <option value="Inactive">Inactive</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-4 d-flex gap-2">
+                        <div class="col-12 col-md-3">
+                            <label for="filterGovtID" class="form-label mb-1">Government ID</label>
+                            <select id="filterGovtID" class="form-select form-select-sm">
+                                <option value="">All Employees</option>
+                                <option value="complete">With Complete Gov't IDs</option>
+                                <option value="incomplete">Missing Gov't IDs</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3 d-flex gap-2">
                             <button id="resetFilters" class="btn btn-outline-secondary btn-sm ms-auto mt-auto">Reset Filters</button>
                         </div>
                     </div>
@@ -346,6 +371,17 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                           ORDER BY u.Last_Name";
                                 $stmt = $conn->prepare($query);
                                 $stmt->execute();
+                                
+                                // Function to check if a government ID is a placeholder (all zeros or common patterns)
+                                function isPlaceholderGovtId($id) {
+                                    if (empty($id)) return true;
+                                    
+                                    // Remove all non-numeric characters for checking
+                                    $numericOnly = preg_replace('/\D/', '', $id);
+                                    
+                                    // Check if it's all zeros or empty
+                                    return empty($numericOnly) || ctype_digit($numericOnly) && intval($numericOnly) === 0;
+                                }
                                 
                                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                     // Format name with middle initial
@@ -400,14 +436,28 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                         $lengthOfService .= "<br><small class='text-muted'>(Since " . $hireDate . ")</small>";
                                     }
                                     
-                                    echo "<tr>";
+                                    // Check government ID completeness - handle various placeholder patterns
+                                    
+                                    $hasSSS = !isPlaceholderGovtId($row['sss_number']);
+                                    $hasTIN = !isPlaceholderGovtId($row['tin_number']);
+                                    $hasPhilHealth = !isPlaceholderGovtId($row['philhealth_number']);
+                                    $hasPagIBIG = !isPlaceholderGovtId($row['pagibig_number']);
+                                    $govtIDComplete = $hasSSS && $hasTIN && $hasPhilHealth && $hasPagIBIG;
+                                    
+                                    echo "<tr data-govt-complete='" . ($govtIDComplete ? 'true' : 'false') . "'>";
                                     echo "<td><img src='" . htmlspecialchars($profilePic) . "' alt='Profile' class='rounded-circle' width='40' height='40' style='object-fit: cover;'></td>";
                                     echo "<td>" . htmlspecialchars($row['employee_id']) . "</td>";
                                     echo "<td>" . htmlspecialchars($fullName) . "</td>";
                                     echo "<td>" . htmlspecialchars($row['Role_Name']) . "</td>";
                                     echo "<td>" . htmlspecialchars($row['phone_number']) . "</td>";
                                     echo "<td>" . $lengthOfService . "</td>";
-                                    echo "<td><span class='badge {$statusClass}'>" . htmlspecialchars($row['status']) . "</span></td>";
+                                    
+                                    // Add government ID indicator next to status
+                                    $govtIDIndicator = $govtIDComplete ? 
+                                        "<small class='text-success ms-1' title='Government IDs Complete'><i class='material-icons' style='font-size: 14px;'>check_circle</i></small>" : 
+                                        "<small class='text-warning ms-1' title='Missing Government IDs'><i class='material-icons' style='font-size: 14px;'>warning</i></small>";
+                                    
+                                    echo "<td><span class='badge {$statusClass}'>" . htmlspecialchars($row['status']) . "</span>" . $govtIDIndicator . "</td>";
                                     echo "<td>
                                             <button class='btn btn-sm btn-primary view-details me-1' data-id='" . $row['User_ID'] . "' title='View Details'>
                                                 <i class='material-icons'>visibility</i>
@@ -654,7 +704,17 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                         <div class="step-content d-none" id="step3">
                             <h6 class="mb-3">Account Details & Government ID Numbers</h6>
                             <div class="row g-3">
-                                <div class="col-md-12">
+                                <div class="col-md-6">
+                                    <label for="employeeType" class="form-label">Employee Type <span class="required">*</span></label>
+                                    <select class="form-select" id="employeeType" name="employee_type" required>
+                                        <option value="">Select Employee Type</option>
+                                        <option value="new">New Employee</option>
+                                        <option value="old">Existing Employee</option>
+                                    </select>
+                                    <div class="form-text text-muted">Select if this is a new employee or someone rejoining</div>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                                <div class="col-md-6">
                                     <label for="employeeId" class="form-label">Employee ID <span class="required">*</span></label>
                                     <input type="text" class="form-control" id="employeeId" name="employee_id" required>
                                     <div class="form-text text-muted">Enter a unique employee ID (e.g., EMP001, GUARD001, etc.)</div>
@@ -664,6 +724,13 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                 <!-- Government Details Section -->
                                 <div class="col-12 mt-4">
                                     <h6 class="text-primary mb-3"><i class="material-icons align-middle me-1">credit_card</i>Government ID Numbers <span class="required">*</span></h6>
+                                    
+                                    <!-- New Employee Alert -->
+                                    <div class="alert alert-warning d-none" id="newEmployeeAlert">
+                                        <i class="material-icons align-middle me-1">info</i>
+                                        <strong>New Employee:</strong> Default placeholder values will be used. These can be updated later when the employee provides their actual government ID numbers.
+                                    </div>
+                                    
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <label for="sssNumber" class="form-label">SSS Number <span class="required">*</span></label>
@@ -810,8 +877,8 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                 ]
             });
 
-            // Custom filtering combining Department and Status
-            $.fn.dataTable.ext.search.push(function(settings, data /*, dataIndex */) {
+            // Custom filtering combining Department, Status, and Government ID
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 if (settings.nTable.getAttribute('id') !== 'masterlistTable') return true;
                 // Columns: 0 Profile, 1 EmpID, 2 Name, 3 Role, 4 Phone, 5 Length, 6 Status, 7 Actions
                 const roleCell = (data[3] || '').toString();
@@ -820,19 +887,31 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
 
                 const deptSel = ($('#filterDepartment').val() || '').trim();
                 const statusSel = ($('#filterStatus').val() || '').trim();
+                const govtIDSel = ($('#filterGovtID').val() || '').trim();
 
                 // Department targets the Role column
                 if (deptSel && roleCell !== deptSel) return false;
                 if (statusSel && statusCell !== statusSel) return false;
+                
+                // Government ID filtering
+                if (govtIDSel) {
+                    const row = settings.aoData[dataIndex].nTr;
+                    const govtComplete = row ? row.getAttribute('data-govt-complete') === 'true' : false;
+                    
+                    if (govtIDSel === 'complete' && !govtComplete) return false;
+                    if (govtIDSel === 'incomplete' && govtComplete) return false;
+                }
+                
                 return true;
             });
 
             function triggerFilter() { table.draw(); }
-            $('#filterDepartment, #filterStatus').on('change', triggerFilter);
+            $('#filterDepartment, #filterStatus, #filterGovtID').on('change', triggerFilter);
             $('#resetFilters').on('click', function(e){
                 e.preventDefault();
                 $('#filterDepartment').val('');
                 $('#filterStatus').val('');
+                $('#filterGovtID').val('');
                 table.draw();
             });
             
@@ -1476,6 +1555,52 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
             let currentStep = 1;
             const totalSteps = 3;
 
+            // Employee Type selection handling
+            $('#employeeType').on('change', function() {
+                const employeeType = $(this).val();
+                dbg('Employee type selected:', employeeType);
+                
+                if (employeeType === 'new') {
+                    // Show alert for new employee
+                    $('#newEmployeeAlert').removeClass('d-none');
+                    
+                    // Set placeholder values for government IDs
+                    $('#sssNumber').val('00-0000000-0');
+                    $('#tinNumber').val('000-000-000-000');
+                    $('#philhealthNumber').val('00-000000000-0');
+                    $('#pagibigNumber').val('0000-0000-0000');
+                    
+                    // Make fields read-only for new employees (they can be updated later)
+                    $('.govt-id-input').prop('readonly', true);
+                    $('.govt-id-input').addClass('bg-light');
+                    
+                    dbg('Set placeholder values for new employee');
+                } else if (employeeType === 'old') {
+                    // Hide alert and make fields editable
+                    $('#newEmployeeAlert').addClass('d-none');
+                    
+                    // Clear values and make fields editable
+                    $('#sssNumber').val('');
+                    $('#tinNumber').val('');
+                    $('#philhealthNumber').val('');
+                    $('#pagibigNumber').val('');
+                    
+                    $('.govt-id-input').prop('readonly', false);
+                    $('.govt-id-input').removeClass('bg-light');
+                    
+                    dbg('Cleared values for existing employee');
+                } else {
+                    // No type selected - hide alert and clear fields
+                    $('#newEmployeeAlert').addClass('d-none');
+                    $('#sssNumber').val('');
+                    $('#tinNumber').val('');
+                    $('#philhealthNumber').val('');
+                    $('#pagibigNumber').val('');
+                    $('.govt-id-input').prop('readonly', false);
+                    $('.govt-id-input').removeClass('bg-light');
+                }
+            });
+
             // Role selection
             $('.role-card').on('click', function() {
                 dbg('Role card clicked');
@@ -1722,6 +1847,7 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                 } else if (currentStep === 3) {
                     dbg('Step3 validation start');
                     const requiredFields = [
+                        { id: 'employeeType', name: 'Employee Type' },
                         { id: 'employeeId', name: 'Employee ID' },
                         { id: 'sssNumber', name: 'SSS Number' },
                         { id: 'tinNumber', name: 'TIN Number' },
@@ -1810,6 +1936,17 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                 $('#employeeId').removeClass('is-invalid');
                 $('#locationSection').hide();
                 $('#guardLocation').prop('required', false);
+                
+                // Reset employee type and government ID fields
+                $('#employeeType').val('');
+                $('#newEmployeeAlert').addClass('d-none');
+                $('#sssNumber').val('');
+                $('#tinNumber').val('');
+                $('#philhealthNumber').val('');
+                $('#pagibigNumber').val('');
+                $('.govt-id-input').prop('readonly', false);
+                $('.govt-id-input').removeClass('bg-light');
+                
                 showStep(1);
             }
 
