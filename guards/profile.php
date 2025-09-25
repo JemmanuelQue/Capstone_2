@@ -67,7 +67,7 @@ $roleLabel = isset($roles[$user['Role_ID']]) ? $roles[$user['Role_ID']] : 'User'
     <div class="container-xxl py-4">
          <div class="d-flex justify-content-end mb-3">
             <?php
-            $backPage = isset($_SESSION['last_page']) ? $_SESSION['last_page'] : 'superadmin_dashboard.php';
+            $backPage = isset($_SESSION['last_page']) ? $_SESSION['last_page'] : 'guards_dashboard.php';
             ?>
             <a href="<?php echo htmlspecialchars($backPage); ?>" class="btn btn-outline-secondary btn-sm"><span class="material-icons" style="font-size:18px; vertical-align:middle;">arrow_back</span> Back</a>
         </div>

@@ -33,6 +33,13 @@ if (empty($period)) {
     $period = $isFirstHalf ? 'first' : 'second';
 }
 
+if (session_status() === PHP_SESSION_NONE) session_start();
+// Save current page as last visited (except profile)
+if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
+    $_SESSION['last_page'] = $_SERVER['REQUEST_URI'];
+}
+
+
 // Set period date ranges based on selection
 if ($period == 'first') {
     $periodStart = "$selectedYear-$selectedMonth-01";
