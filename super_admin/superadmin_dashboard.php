@@ -368,7 +368,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                     <label class="form-label">&nbsp;</label>
                                     <button type="submit" class="btn btn-primary w-100 d-flex justify-content-center gap-1" id="filterBtn">
                                         <span class="material-icons">search</span>
-                                        Apply Filter
+                                        Apply 
                                     </button>
                                 </div>
                             </div>

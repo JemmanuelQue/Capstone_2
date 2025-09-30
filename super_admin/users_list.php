@@ -78,7 +78,7 @@ function checkGovtIdCompleteness($user) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/users_list.css">
+    <link rel="stylesheet" href="css/users_list.css?v=<?php echo time(); ?>">
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -198,7 +198,7 @@ function checkGovtIdCompleteness($user) {
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-6 col-md-2">
                                 <select class="form-select" id="roleFilter">
                                     <option value="">All Roles</option>
                                     <option value="1">Super Admin</option>
@@ -208,7 +208,7 @@ function checkGovtIdCompleteness($user) {
                                     <option value="5">Guard</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-6 col-md-2">
                                 <select class="form-select" id="statusFilter">
                                     <option value="">All Statuses</option>
                                     <option value="Active">Active</option>
@@ -239,13 +239,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -275,7 +268,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -305,13 +298,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -341,7 +327,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -371,13 +357,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -407,7 +386,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -437,13 +416,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -473,7 +445,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -506,13 +478,6 @@ function checkGovtIdCompleteness($user) {
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -542,7 +507,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';

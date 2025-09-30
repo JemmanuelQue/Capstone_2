@@ -291,7 +291,7 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                         </select>
                     </div>
                      <div class="col-6 col-md-3">
-                        <label for="guard_name" class="form-label">Search Guard Name</label>
+                        <label for="guard_name" class="form-label">Search Guard</label>
                         <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Enter name..."
                                value="<?php echo isset($_GET['guard_name']) ? htmlspecialchars($_GET['guard_name']) : ''; ?>">
                     </div>        
