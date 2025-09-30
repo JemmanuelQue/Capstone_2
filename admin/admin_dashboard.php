@@ -331,7 +331,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                         <hr class="divider">
                         <form method="GET" class="p-3">
                             <div class="row g-3">
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label for="year" class="form-label">Year</label>
                                     <select name="year" id="year" class="form-select">
                                         <?php for($y = date('Y'); $y >= 2020; $y--): ?>
@@ -341,7 +341,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <?php endfor; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label for="month" class="form-label">Month</label>
                                     <select name="month" id="month" class="form-select">
                                         <option value="">All Months</option>
@@ -352,7 +352,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <?php endfor; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label for="dateRange" class="form-label">Date Range</label>
                                     <select name="dateRange" id="dateRange" class="form-select">
                                         <option value="1-31" <?php echo ($dateRange === '1-31') ? 'selected' : ''; ?>>Full Month</option>
@@ -360,11 +360,11 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                         <option value="16-31" <?php echo ($dateRange === '16-31') ? 'selected' : ''; ?>>16th to End</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-6 col-md-3">
                                     <label class="form-label">&nbsp;</label>
                                     <button type="submit" class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-1" id="filterBtn">
                                         <span class="material-icons">search</span>
-                                        Filter Analytics
+                                        Apply
                                     </button>
                                 </div>
                             </div>

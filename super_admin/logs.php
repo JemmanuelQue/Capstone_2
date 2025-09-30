@@ -341,7 +341,7 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                 <div class="card mb-4">
                     <div class="card-body">
                         <form action="" method="GET" class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-12 col-md-3">
                                 <label for="activity_type" class="form-label">Activity Type</label>
                                 <select name="activity_type" id="activity_type" class="form-select">
                                     <option value="">All Activities</option>
@@ -352,39 +352,57 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-6 col-md-2">
                                 <label for="date_from" class="form-label">From Date</label>
                                 <input type="date" class="form-control" id="date_from" name="date_from" value="<?php echo $dateFrom; ?>">
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-6 col-md-2">
                                 <label for="date_to" class="form-label">To Date</label>
                                 <input type="date" class="form-control" id="date_to" name="date_to" value="<?php echo $dateTo; ?>">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-3">
                                 <label for="search" class="form-label">Search</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" id="search" name="search" 
-                                           placeholder="Search details or user names" value="<?php echo $searchTerm; ?>">
+                                           placeholder="Details or names..." value="<?php echo $searchTerm; ?>">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="material-icons">search</i> Search
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <a href="logs.php" class="btn btn-primary">
+                            <div class="col-12 col-md-1 d-flex align-items-end">
+                                <a href="logs.php" class="btn btn-primary w-100">
                                     <i class="material-icons align-middle">refresh</i>
                                 </a>
                             </div>
                         </form>
-                        
-                        <!-- Accordion Controls -->
-                        <div class="mt-3 text-center">
-                            <button type="button" class="btn btn-outline-primary btn-sm me-2" id="expandAllBtn">
-                                <i class="material-icons align-middle">expand_more</i> Expand All
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="collapseAllBtn">
-                                <i class="material-icons align-middle">expand_less</i> Collapse All
-                            </button>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="card-title mb-3">
+                                    <i class="material-icons align-middle me-2">file_download</i>
+                                    Export Logs
+                                </h6>
+                            </div>
+                        </div>
+                        <div class="row g-2 justify-content-center justify-content-md-end">
+                            <div class="col-6 col-md-auto">
+                                <button type="button" class="btn btn-danger w-100" id="exportPdfBtn">
+                                    <i class="material-icons align-middle me-2">picture_as_pdf</i>
+                                    Export PDF
+                                </button>
+                            </div>
+                            <div class="col-6 col-md-auto">
+                                <button type="button" class="btn btn-success w-100" id="exportExcelBtn">
+                                    <i class="material-icons align-middle me-2">table_chart</i>
+                                    Export Excel
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -529,125 +547,6 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
             </div>
         </div>
 
-        <!-- Update Profile Modal -->
-        <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- Add method and enctype for file uploads -->
-                        <form id="updateProfileForm" method="POST" action="update_profile.php" enctype="multipart/form-data">
-                            <div class="mb-3">
-                                <label for="profilePic" class="form-label">Profile Image</label>
-                                <div class="text-center mb-3">
-                                    <!-- Current profile image -->
-                                    <img id="currentProfileImage" src="<?php echo !empty($superadminProfile) ? $superadminProfile : '../assets/images/profile.jpg'; ?>" 
-                                        alt="Current Profile" class="rounded-circle" width="100" height="100">
-                                        
-                                    <!-- Preview container (initially hidden) -->
-                                    <div id="imagePreviewContainer" style="display: none;" class="mt-3">
-                                        <p id="previewText" class="text-muted mb-2"></p>
-                                        <img id="imagePreview" src="#" alt="Image Preview" class="rounded-circle" width="100" height="100">
-                                    </div>
-                                </div>
-                                <input type="file" class="form-control" id="profilePic" name="profilePic" 
-                                    accept=".jpg,.jpeg,.png,.avif">
-                                <small class="form-text text-muted">Accepted file types: JPG, PNG, AVIF. Max size: 5MB</small>
-                            </div>
-                            <div class="mb-3">
-                                <label for="firstName" class="form-label">First Name</label>
-                                <input type="text" class="form-control" id="firstName" name="firstName" 
-                                    value="<?php echo isset($superadminData['First_Name']) ? $superadminData['First_Name'] : ''; ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="lastName" class="form-label">Last Name</label>
-                                <input type="text" class="form-control" id="lastName" name="lastName" 
-                                    value="<?php echo isset($superadminData['Last_Name']) ? $superadminData['Last_Name'] : ''; ?>">
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-success">Save Changes</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    <!-- SWAL Alerts for Profile Picture -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if(isset($_SESSION['profilepic_success'])): ?>
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: '<?php echo $_SESSION['profilepic_success']; ?>',
-                    confirmButtonColor: '#2a7d4f'
-                });
-                <?php unset($_SESSION['profilepic_success']); ?>
-            <?php endif; ?>
-
-            <?php if(isset($_SESSION['profilepic_error'])): ?>
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: '<?php echo $_SESSION['profilepic_error']; ?>',
-                    confirmButtonColor: '#dc3545'
-                });
-                <?php unset($_SESSION['profilepic_error']); ?>
-            <?php endif; ?>
-        });
-    </script>
-
-    <!-- Profile Picture Preview Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get the file input and preview image elements
-            const profilePicInput = document.getElementById('profilePic');
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            const previewImage = document.getElementById('imagePreview');
-            const currentImage = document.getElementById('currentProfileImage');
-            
-            // Listen for file selection
-            profilePicInput.addEventListener('change', function() {
-                const file = this.files[0];
-                
-                // Check if a file was selected
-                if (file) {
-                    // Show the preview container
-                    previewContainer.style.display = 'block';
-                    
-                    // Hide the current image
-                    if (currentImage) {
-                        currentImage.style.display = 'none';
-                    }
-                    
-                    // Create a FileReader to read the image
-                    const reader = new FileReader();
-                    
-                    // Set up the FileReader onload event
-                    reader.onload = function(e) {
-                        // Set the preview image source to the loaded data URL
-                        previewImage.src = e.target.result;
-                    }
-                    
-                    // Read the file as a data URL
-                    reader.readAsDataURL(file);
-                    
-                } else {
-                    // If no file selected or selection canceled, show current image
-                    previewContainer.style.display = 'none';
-                    if (currentImage) {
-                        currentImage.style.display = 'block';
-                    }
-                }
-            });
-        });
-    </script>
-
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
@@ -742,27 +641,6 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                 });
             }
             
-            // Add expand/collapse all buttons functionality
-            document.getElementById('expandAllBtn')?.addEventListener('click', function() {
-                const accordionItems = document.querySelectorAll('.accordion-collapse');
-                accordionItems.forEach(item => {
-                    const bsCollapse = new bootstrap.Collapse(item, {
-                        toggle: false
-                    });
-                    bsCollapse.show();
-                });
-            });
-            
-            document.getElementById('collapseAllBtn')?.addEventListener('click', function() {
-                const accordionItems = document.querySelectorAll('.accordion-collapse');
-                accordionItems.forEach(item => {
-                    const bsCollapse = new bootstrap.Collapse(item, {
-                        toggle: false
-                    });
-                    bsCollapse.hide();
-                });
-            });
-            
             // Initialize DataTables for all log tables
             const logTables = document.querySelectorAll('.logs-datatable');
             logTables.forEach(table => {
@@ -784,6 +662,19 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                     responsive: true,
                     dom: 'lfrtip' // Default layout
                 });
+            });
+            
+            // Export functionality
+            document.getElementById('exportPdfBtn')?.addEventListener('click', function() {
+                const currentParams = new URLSearchParams(window.location.search);
+                currentParams.set('export', 'pdf');
+                window.open('export_logs.php?' + currentParams.toString(), '_blank');
+            });
+            
+            document.getElementById('exportExcelBtn')?.addEventListener('click', function() {
+                const currentParams = new URLSearchParams(window.location.search);
+                currentParams.set('export', 'excel');
+                window.location.href = 'export_logs.php?' + currentParams.toString();
             });
         });
     </script>

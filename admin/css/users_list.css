@@ -6,21 +6,94 @@ body {
 }
 
 /* Consistent column widths across all user tables */
+/* Users table layout adjustments for responsiveness & horizontal scroll */
+.table-responsive {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+.table-responsive::-webkit-scrollbar { height: 8px; }
+.table-responsive::-webkit-scrollbar-thumb { background:#2a7d4f; border-radius:4px; }
+
 .users-table {
-    table-layout: fixed;
-    width: 100%;
+    table-layout: fixed !important;
+    width: 100% !important;
+    min-width: 1200px !important; /* much larger min-width */
+    border-collapse: separate !important;
+    border-spacing: 15px 0 !important; /* much larger spacing */
 }
 .users-table thead th,
 .users-table tbody td {
     vertical-align: middle;
+    padding: 8px 10px; /* reduced padding slightly for mobile */
 }
-.users-table .btn {
-    padding: 4px 8px;
+/* Allow header text to wrap to avoid overlapping compressed text */
+.users-table thead th { 
+    font-size: 13px; 
+    white-space: normal; 
+    line-height: 1.3; 
+    font-weight: 600;
+    text-align: center;
+}
+/* Default keep data cells on one line for compactness */
+.users-table tbody td { font-size: 13px; white-space: nowrap; }
+.users-table .btn { padding: 5px 8px; font-size: 12px; }
+
+/* Column specific sizing - FORCED WIDTHS */
+.table.users-table thead th:nth-child(1),
+.table.users-table tbody td:nth-child(1) { width: 15% !important; min-width: 120px !important; text-align: center !important; }
+.table.users-table thead th:nth-child(2),
+.table.users-table tbody td:nth-child(2) { width: 25% !important; min-width: 250px !important; line-height: 1.25; white-space: normal; word-break: break-word; }
+.table.users-table thead th:nth-child(3),
+.table.users-table tbody td:nth-child(3) { width: 20% !important; min-width: 180px !important; text-align: center !important; }
+.table.users-table thead th:nth-child(4),
+.table.users-table tbody td:nth-child(4) { width: 15% !important; min-width: 150px !important; text-align: center !important; }
+.table.users-table thead th:nth-child(5),
+.table.users-table tbody td:nth-child(5),
+.table.users-table td.actions-cell { width: 25% !important; min-width: 300px !important; text-align: center !important; white-space: normal !important; }
+
+.users-table td.actions-cell .btn {
+    margin: 2px 1px;
+    display: inline-block;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    padding: 0;
+    border-radius: 6px;
 }
 
-/* Prevent header misalignment when scrollbars appear */
-.table-responsive {
-    overflow-y: hidden;
+/* Very small screens - AGGRESSIVE MOBILE LAYOUT */
+@media (max-width:575.98px){
+    .users-table { 
+        min-width: 1300px !important; /* very large to force proper spacing */
+        border-spacing: 15px 0 !important; /* maintain large spacing */
+        table-layout: fixed !important;
+    }
+    .users-table thead th, .users-table tbody td { 
+        padding: 10px 8px !important; 
+        font-size: 11px !important; 
+    }
+    .users-table thead th { 
+        font-size: 10px !important; 
+        line-height: 1.2 !important; 
+        font-weight: 600 !important;
+        text-align: center !important;
+    }
+    .users-table td.actions-cell .btn { 
+        width: 30px !important; 
+        height: 30px !important; 
+        padding: 0 !important; 
+        display: block !important; 
+        margin: 2px auto !important; 
+        font-size: 10px !important;
+    }
+    .users-table td.actions-cell { 
+        vertical-align: top !important; 
+        min-width: 280px !important;
+        width: 25% !important;
+    }
 }
 
 /* Sidebar styles */

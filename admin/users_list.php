@@ -78,7 +78,7 @@ function checkGovtIdCompleteness($user) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/users_list.css">
+    <link rel="stylesheet" href="css/users_list.css?v=<?php echo time(); ?>">
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -192,7 +192,7 @@ function checkGovtIdCompleteness($user) {
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-6 col-md-2">
                                 <select class="form-select" id="roleFilter">
                                     <option value="">All Roles</option>
                                     <option value="1">Super Admin</option>
@@ -202,7 +202,7 @@ function checkGovtIdCompleteness($user) {
                                     <option value="5">Guard</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-6 col-md-2">
                                 <select class="form-select" id="statusFilter">
                                     <option value="">All Statuses</option>
                                     <option value="Active">Active</option>

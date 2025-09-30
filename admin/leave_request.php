@@ -253,20 +253,20 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
     
     <!-- Filter Section -->
     <div class="card mb-3 shadow-sm">
-        <div class="card-body">
+        <div class="card-body d-flex justify-content-center">
             <form id="filterForm" method="GET">
                 <div class="row g-2">
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="start_date" class="form-label">Start Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
                                value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : date('Y-m-01'); ?>">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="end_date" class="form-label">End Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
                                value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : date('Y-m-t'); ?>">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="location" class="form-label">Location</label>
                         <select class="form-select" id="location" name="location">
                             <option value="">All Locations</option>
@@ -285,14 +285,14 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                             ?>
                         </select>
                     </div>
-                     <div class="col-md-2">
-                        <label for="guard_name" class="form-label">Guard Name</label>
-                        <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Search guard name..."
+                     <div class="col-6 col-md-2">
+                        <label for="guard_name" class="form-label">Search Guard</label>
+                        <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Enter name..."
                                value="<?php echo isset($_GET['guard_name']) ? htmlspecialchars($_GET['guard_name']) : ''; ?>">
                     </div>        
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-12 col-md-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2 d-flex align-items-center">
-                            <i class="material-icons me-1">search</i> Filter
+                            <i class="material-icons me-1">search</i> Apply Filter
                         </button>
                         <a href="leave_request.php" class="btn btn-outline-secondary d-flex align-items-center">
                             <i class="material-icons me-1">clear</i> Clear
