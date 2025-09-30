@@ -144,17 +144,17 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
         <div class="card-body">
             <form id="filterForm" method="GET" class="d-flex justify-content-center">
                 <div class="row g-2">
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="start_date" class="form-label">Start Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
                                value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : date('Y-m-01'); ?>">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="end_date" class="form-label">End Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
                                value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : date('Y-m-t'); ?>">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label for="location" class="form-label">Location</label>
                         <select class="form-select" id="location" name="location">
                             <option value="">All Locations</option>
@@ -173,8 +173,8 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                             ?>
                         </select>
                     </div>
-                     <div class="col-md-2">
-                        <label for="guard_name" class="form-label text-nowrap">Search Guard Name</label>
+                     <div class="col-6 col-md-2">
+                        <label for="guard_name" class="form-label text-nowrap">Search Guard</label>
                         <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Enter name..."
                                value="<?php echo isset($_GET['guard_name']) ? htmlspecialchars($_GET['guard_name']) : ''; ?>">
                     </div>        
@@ -612,10 +612,6 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
             <a href="leave_request.php" class="mobile-nav-item active">
                 <span class="material-icons">event_note</span>
                 <span class="mobile-nav-text">Leave Request</span>
-            </a>
-            <a href="payroll.php" class="mobile-nav-item">
-                <span class="material-icons">payments</span>
-                <span class="mobile-nav-text">Payroll</span>
             </a>
             <a href="recruitment.php" class="mobile-nav-item">
             <span class="material-icons">person_add</span>

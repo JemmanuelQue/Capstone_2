@@ -467,8 +467,8 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <a href="logs.php" class="btn btn-primary">
+                            <div class="col-12 col-md-1 d-flex align-items-end">
+                                <a href="logs.php" class="btn btn-primary w-100">
                                     <i class="material-icons align-middle">refresh</i>
                                 </a>
                             </div>

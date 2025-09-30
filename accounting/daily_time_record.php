@@ -486,108 +486,6 @@ $monthName = date('F', strtotime("$year-$month-01"));
         </div>
     </div>
         
-    <!-- Update Profile Modal -->
-    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Add method and enctype for file uploads -->
-                    <form id="updateProfileForm" method="POST" action="update_profile.php" enctype="multipart/form-data">
-                        <div class="mb-3">
-                            <label for="profilePic" class="form-label">Profile Image</label>
-                            <div class="text-center mb-3">
-                                <!-- Current profile image -->
-                                <img id="currentProfileImage" src="<?php echo !empty($superadminProfile) ? $superadminProfile : '../assets/images/profile.jpg'; ?>" 
-                                    alt="Current Profile" class="rounded-circle" width="100" height="100">
-                                    
-                                <!-- Preview container (initially hidden) -->
-                                <div id="imagePreviewContainer" style="display: none;" class="mt-3">
-                                    <p id="previewText" class="text-muted mb-2"></p>
-                                    <img id="imagePreview" src="#" alt="Image Preview" class="rounded-circle" width="100" height="100">
-                                </div>
-                            </div>
-                            <input type="file" class="form-control" id="profilePic" name="profilePic" 
-                                accept=".jpg,.jpeg,.png,.avif">
-                            <small class="form-text text-muted">Accepted file types: JPG, PNG, AVIF. Max size: 5MB</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="firstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="firstName" name="firstName" 
-                                value="<?php echo $superadminData['First_Name']; ?>">
-                        </div>
-                        <div class="mb-3">
-
-    <!-- SWAL Alerts for Profile Picture -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if(isset($_SESSION['profilepic_success'])): ?>
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: '<?php echo $_SESSION['profilepic_success']; ?>',
-                    confirmButtonColor: '#2a7d4f'
-                });
-                <?php unset($_SESSION['profilepic_success']); ?>
-            <?php endif; ?>
-
-            <?php if(isset($_SESSION['profilepic_error'])): ?>
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: '<?php echo $_SESSION['profilepic_error']; ?>',
-                    confirmButtonColor: '#dc3545'
-                });
-                <?php unset($_SESSION['profilepic_error']); ?>
-            <?php endif; ?>
-        });
-    </script>
-
-    <!-- Bootstrap and jQuery JS -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-
-    <!-- Sidebar and Tooltip??? JS -->
-    <script src="js/accounting_dashboard.js"></script>
-
-    <script>
-$(document).ready(function() {
-    // Build export URL with current filters
-    function buildExportUrl(type){
-        const params = new URLSearchParams();
-        params.set('month', $('#monthFilter').val());
-        params.set('year', $('#yearFilter').val());
-        params.set('period', $('#periodFilter').val());
-        const loc = $('#locationFilter').val();
-        const search = $('#guardSearch').val();
-        if (loc) params.set('location', loc);
-        if (search) params.set('guardSearch', search);
-        // Unified endpoint
-        let endpoint = 'dtr_pdf_excel.php';
-        // Map type to action param
-        let action = 'excel';
-        if (type === 'pdf') action = 'pdf';
-        params.set('action', action);
-        return endpoint + '?' + params.toString();
-    }
-
-    $('#exportPdfBtn').on('click', function(){
-        const url = buildExportUrl('pdf');
-        window.open(url, '_blank');
-    });
-    $('#exportExcelBtn').on('click', function(){
-        const url = buildExportUrl('excel');
-        window.open(url, '_blank');
-    });
-});
-</script>
-
     <!-- Mobile Bottom Navigation -->
     <div class="mobile-nav">
         <div class="mobile-nav-container">
@@ -632,5 +530,49 @@ $(document).ready(function() {
         </div>
     </div>
 
+  
+    <!-- Bootstrap and jQuery JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+
+    <!-- Sidebar and Tooltip??? JS -->
+    <script src="js/accounting_dashboard.js"></script>
+
+    <script>
+$(document).ready(function() {
+    // Build export URL with current filters
+    function buildExportUrl(type){
+        const params = new URLSearchParams();
+        params.set('month', $('#monthFilter').val());
+        params.set('year', $('#yearFilter').val());
+        params.set('period', $('#periodFilter').val());
+        const loc = $('#locationFilter').val();
+        const search = $('#guardSearch').val();
+        if (loc) params.set('location', loc);
+        if (search) params.set('guardSearch', search);
+        // Unified endpoint
+        let endpoint = 'dtr_pdf_excel.php';
+        // Map type to action param
+        let action = 'excel';
+        if (type === 'pdf') action = 'pdf';
+        params.set('action', action);
+        return endpoint + '?' + params.toString();
+    }
+
+    $('#exportPdfBtn').on('click', function(){
+        const url = buildExportUrl('pdf');
+        window.open(url, '_blank');
+    });
+    $('#exportExcelBtn').on('click', function(){
+        const url = buildExportUrl('excel');
+        window.open(url, '_blank');
+    });
+});
+</script>
+
+    
 </body>
 </html>

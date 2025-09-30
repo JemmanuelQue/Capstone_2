@@ -272,11 +272,11 @@ $archivedAttendanceStmt->execute($params);
                         <!-- Filter form - updated structure with buttons in the same row as filters -->
                         <div class="filter-form">
                             <form method="GET" action="archives.php" class="row g-3">
-                                <div class="col-md-2">
-                                    <label for="name" class="form-label">Guard Name</label>
-                                    <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($filterName); ?>" placeholder="Search name...">
+                                <div class="col -6 col-md-2">
+                                    <label for="name" class="form-label">Search Guard</label>
+                                    <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($filterName); ?>" placeholder="Enter name...">
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-md-2">
                                     <label for="location" class="form-label">Location</label>
                                     <select class="form-select" id="location" name="location">
                                         <option value="">All Locations</option>
@@ -287,11 +287,11 @@ $archivedAttendanceStmt->execute($params);
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-md-2">
                                     <label for="date_from" class="form-label">Date From</label>
                                     <input type="date" class="form-control" id="date_from" name="date_from" value="<?php echo htmlspecialchars($filterDateFrom); ?>">
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-md-2">
                                     <label for="date_to" class="form-label">Date To</label>
                                     <input type="date" class="form-control" id="date_to" name="date_to" value="<?php echo htmlspecialchars($filterDateTo); ?>">
                                 </div>
@@ -537,45 +537,6 @@ $archivedAttendanceStmt->execute($params);
         </div>
     </div>
 
-    <!-- Update Profile Modal -->
-    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="updateProfileForm" method="POST" action="update_profile.php" enctype="multipart/form-data">
-                        <div class="mb-3 text-center">
-                            <img src="<?php echo $profilePic; ?>" class="rounded-circle" width="100" height="100" id="profilePreview">
-                            <div class="mt-2">
-                                <label for="profilePic" class="btn btn-sm btn-outline-secondary">
-                                    Change Profile Picture
-                                </label>
-                                <input type="file" class="d-none" id="profilePic" name="profilePic" accept="image/*">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="firstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="firstName" name="firstName" 
-                                value="<?php echo $accountingData['First_Name']; ?>">
-                        </div>
-                        <div class="mb-3">
-                            <label for="lastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="lastName" name="lastName" 
-                                value="<?php echo $accountingData['Last_Name']; ?>">
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     
@@ -585,17 +546,6 @@ $archivedAttendanceStmt->execute($params);
         document.getElementById('toggleSidebar').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('collapsed');
             document.getElementById('main-content').classList.toggle('expanded');
-        });
-
-        // Profile picture preview
-        document.getElementById('profilePic').addEventListener('change', function(e) {
-            if (e.target.files && e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('profilePreview').src = e.target.result;
-                }
-                reader.readAsDataURL(e.target.files[0]);
-            }
         });
 
         // Display current date and time
