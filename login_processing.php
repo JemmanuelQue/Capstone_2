@@ -144,6 +144,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             case 5: // Security Guard
                 header("Location: guards/guards_dashboard.php");
                 break;
+            case 8: // OIC
+                header("Location: oic/dashboard.php");
+                break;
             default:
                 $_SESSION['toast_error'] = "Invalid user role. Please contact administrator.";
                 header("Location: login.php");
