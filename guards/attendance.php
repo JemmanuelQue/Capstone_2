@@ -548,6 +548,14 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
             MOVEMENT: false
         };
 
+        // Track last logged state to avoid console spam
+        let __prevAssessmentLog = {
+            faceMatch: null,
+            blink: null,
+            movement: null,
+            verified: null
+        };
+
         // Face matching validation variables
         let faceMatchHistory = [];
         const FACE_MATCH_HISTORY_SIZE = 5;
@@ -814,7 +822,7 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
                                 const currentUserId = '<?php echo isset($_SESSION["user_id"]) ? $_SESSION["user_id"] : ""; ?>';
                                 
                                 // If verification is complete and it's the same user, skip re-verification completely
-                                if (isVerificationComplete && lastVerifiedUserId === currentUserId && VERIFICATION_STEPS.FACE_MATCH) {
+                                    if (isVerificationComplete && lastVerifiedUserId === currentUserId && VERIFICATION_STEPS.FACE_MATCH) {
                                     // Just do a quick face match check for security without re-doing liveness tests
                                     const currentDescriptor = detection.descriptor;
                                     const distance = faceapi.euclideanDistance(currentDescriptor, referenceDescriptor);
@@ -847,7 +855,10 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
                                         if (isValidMatch) {
                                             VERIFICATION_STEPS.FACE_MATCH = true;
                                             updateActivity();
-                                            console.log('Face match verified with high confidence');
+                                            console.log('Face match verified with high confidence', {
+                                                distance: faceapi.euclideanDistance(detection.descriptor, referenceDescriptor).toFixed(4),
+                                                consecutiveMatches
+                                            });
                                             showStatus('Face identity verified!', true);
                                             // clearVideoMessage(); // No longer needed
                                         } else {
@@ -883,6 +894,20 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
                                                 buttons.forEach(btn => btn.disabled = false);
                                                 recognizedFace = true;
                                                 faceDescriptor = detection.descriptor;
+                                                // Log a consolidated assessment on verification completion
+                                                try {
+                                                    const distance = faceapi.euclideanDistance(detection.descriptor, referenceDescriptor);
+                                                    console.log('FaceAPI assessment summary (verified)', {
+                                                        detectionScore: detection.detection.score.toFixed(3),
+                                                        distance: distance.toFixed(4),
+                                                        threshold: FACE_MATCH_THRESHOLD,
+                                                        blinkCount,
+                                                        movement: VERIFICATION_STEPS.MOVEMENT,
+                                                        faceMatch: VERIFICATION_STEPS.FACE_MATCH,
+                                                        verified: verificationState.isVerified,
+                                                        consecutiveMatches
+                                                    });
+                                                } catch(e) { console.debug('Summary log error:', e); }
                                             }
                                         }
                                     } else if (!VERIFICATION_STEPS.FACE_MATCH && !isVerificationComplete) {
@@ -891,6 +916,33 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
                                         faceDescriptor = null;
                                     }
                                 }
+                                // Lightweight change-log when assessment state toggles
+                                try {
+                                    const distance = referenceDescriptor ? faceapi.euclideanDistance(detection.descriptor, referenceDescriptor) : null;
+                                    if (
+                                        VERIFICATION_STEPS.FACE_MATCH !== __prevAssessmentLog.faceMatch ||
+                                        VERIFICATION_STEPS.BLINK !== __prevAssessmentLog.blink ||
+                                        VERIFICATION_STEPS.MOVEMENT !== __prevAssessmentLog.movement ||
+                                        verificationState.isVerified !== __prevAssessmentLog.verified
+                                    ) {
+                                        console.log('FaceAPI assessment update', {
+                                            detectionScore: detection.detection.score.toFixed(3),
+                                            distance: distance !== null ? distance.toFixed(4) : null,
+                                            threshold: FACE_MATCH_THRESHOLD,
+                                            blinkCount,
+                                            movement: VERIFICATION_STEPS.MOVEMENT,
+                                            faceMatch: VERIFICATION_STEPS.FACE_MATCH,
+                                            verified: verificationState.isVerified,
+                                            consecutiveMatches
+                                        });
+                                        __prevAssessmentLog = {
+                                            faceMatch: VERIFICATION_STEPS.FACE_MATCH,
+                                            blink: VERIFICATION_STEPS.BLINK,
+                                            movement: VERIFICATION_STEPS.MOVEMENT,
+                                            verified: verificationState.isVerified
+                                        };
+                                    }
+                                } catch(e) { /* ignore logging errors */ }
                                 
                                 // Draw face detection with appropriate color
                                 const dims = faceapi.matchDimensions(canvas, video, true);
@@ -1001,6 +1053,12 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
                 // Disable buttons to prevent multiple submissions
                 const timeInBtn = document.querySelector('button[onclick="recordAttendance(\'time_in\')"]');
                 const timeOutBtn = document.querySelector('button[onclick="recordAttendance(\'time_out\')"]');
+                console.log('recordAttendance invoked', {
+                    action,
+                    confirmed,
+                    recognizedFace,
+                    isVerified: verificationState.isVerified
+                });
                 if (timeInBtn) timeInBtn.disabled = true;
                 if (timeOutBtn) timeOutBtn.disabled = true;
                 
@@ -1653,6 +1711,11 @@ $guard = $stmt->fetch(PDO::FETCH_ASSOC);
                 // Reset all verification states on page load
                 resetVerification();
                 console.log('Verification state reset on page load');
+                // Add click logging for buttons
+                const btnIn = document.querySelector('button[onclick="recordAttendance(\'time_in\', false)\"]') || document.querySelector('button[onclick="recordAttendance(\'time_in\')\"]');
+                const btnOut = document.querySelector('button[onclick="recordAttendance(\'time_out\', false)\"]') || document.querySelector('button[onclick="recordAttendance(\'time_out\')\"]');
+                if (btnIn) btnIn.addEventListener('click', () => console.log('Button clicked: Time In'));
+                if (btnOut) btnOut.addEventListener('click', () => console.log('Button clicked: Time Out'));
                 
                 await checkModels();
                 await loadModels();

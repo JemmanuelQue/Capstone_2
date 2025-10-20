@@ -1,3 +1,6 @@
 /uploads/
+# Ignore all content inside uploads recursively (files and subfolders)
+/uploads/*
+/uploads/**
 /green_meadows_db.sql
 /db_connection.php

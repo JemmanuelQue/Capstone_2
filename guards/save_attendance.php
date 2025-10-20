@@ -158,13 +158,38 @@ try {
             throw new Exception('Upload directory is not writable');
         }
 
-        // Save face image to file system
-        $image_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $data['faceImage']));
-        $image_path = $upload_dir . '/' . time() . '_' . $data['userId'] . '.jpg';
-        
-        if (file_put_contents($image_path, $image_data) === false) {
-            throw new Exception('Failed to save image file');
+        try {
+            $face_image_str = isset($data['faceImage']) ? (string)$data['faceImage'] : '';
+            $image_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $face_image_str));
+            $image_path = $upload_dir . '/' . time() . '_' . $data['userId'] . '.jpg';
+
+            $saved = file_put_contents($image_path, $image_data);
+
+            $response = [
+                'success' => $saved !== false,
+                'userId' => $data['userId'] ?? null,
+                'action' => $data['action'] ?? null,
+                'image_path' => str_replace('\\', '/', $image_path), // ✅ ensure forward slashes
+                'faceImage_length' => strlen($face_image_str),
+                'faceImage_prefix' => substr($face_image_str, 0, 100)
+            ];
+
+            if ($saved === false) {
+                $response['error'] = 'Failed to save image file';
+                http_response_code(500);
+            }
+
+            // ✅ Prevents PHP from escaping slashes in JSON
+            echo json_encode($response, JSON_UNESCAPED_SLASHES);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], JSON_UNESCAPED_SLASHES);
         }
+
+
 
         // Convert face descriptor array to string for storage
         $face_descriptor = json_encode($data['faceDescriptor']);
@@ -242,13 +267,38 @@ try {
         }
 
         // Save face image to file system
-        $image_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $data['faceImage']));
-        $image_path = $upload_dir . '/' . time() . '_' . $data['userId'] . '.jpg';
-        
-        if (file_put_contents($image_path, $image_data) === false) {
-            throw new Exception('Failed to save image file');
+            try {
+            $face_image_str = isset($data['faceImage']) ? (string)$data['faceImage'] : '';
+            $image_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $face_image_str));
+            $image_path = $upload_dir . '/' . time() . '_' . $data['userId'] . '.jpg';
+
+            $saved = file_put_contents($image_path, $image_data);
+
+            $response = [
+                'success' => $saved !== false,
+                'userId' => $data['userId'] ?? null,
+                'action' => $data['action'] ?? null,
+                'image_path' => str_replace('\\', '/', $image_path), // ✅ ensure forward slashes
+                'faceImage_length' => strlen($face_image_str),
+                'faceImage_prefix' => substr($face_image_str, 0, 100)
+            ];
+
+            if ($saved === false) {
+                $response['error'] = 'Failed to save image file';
+                http_response_code(500);
+            }
+
+            // ✅ Prevents PHP from escaping slashes in JSON
+            echo json_encode($response, JSON_UNESCAPED_SLASHES);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], JSON_UNESCAPED_SLASHES);
         }
-        
+
+                
         // Update the time-out information
         $update_stmt = $conn->prepare("
             UPDATE attendance 
