@@ -630,6 +630,23 @@ foreach ($categorizedLogs as $category => $logs) {
                     </div>
                 </div>
 
+                <!-- Export PDF Button (outside filter card, below it) -->
+                <?php 
+                // Build query string to preserve filters for PDF export
+                $qs = http_build_query([
+                    'activity_type' => $activityType,
+                    'date_from' => $dateFrom,
+                    'date_to' => $dateTo,
+                    'search' => $searchTerm,
+                    'limit' => $recordsPerPage
+                ]);
+                ?>
+                <div class="d-flex justify-content-end mb-4">
+                    <a href="export_logs_pdf.php?<?php echo $qs; ?>" class="btn btn-danger" style="width:150px;" target="_blank">
+                        <i class="material-icons align-middle">picture_as_pdf</i> Export PDF
+                    </a>
+                </div>
+
                 <!-- Activity Log Categories -->
                 <?php if (array_sum($categoryCounts) > 0): ?>
                     <div class="accordion mb-4" id="activityLogsAccordion">

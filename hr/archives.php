@@ -143,10 +143,7 @@ if (!empty($archiverIds)) {
                 </a>
             </li>
             <li class="nav-item">
-                <a href="performance_evaluation.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Performance Evaluation">
-                    <span class="material-icons">assessment</span>
-                    <span>Performance Evaluation</span>
-                </a>
+                
             </li>
             <li class="nav-item">
                 <a class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Archives">
@@ -996,10 +993,7 @@ if (!empty($archiverIds)) {
                 <span class="material-icons">assignment</span>
                 <span class="mobile-nav-text">Masterlist</span>
             </a>
-            <a href="performance_evaluation.php" class="mobile-nav-item">
-                <span class="material-icons">assessment</span>
-                <span class="mobile-nav-text">Performance Evaluation</span>
-            </a>
+            
             <a href="archives.php" class="mobile-nav-item active">
                 <span class="material-icons">archive</span>
                 <span class="mobile-nav-text">Archives</span>

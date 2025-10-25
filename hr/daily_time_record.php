@@ -194,10 +194,7 @@ $monthName = date('F', strtotime("$year-$month-01"));
                 </a>
             </li>
             <li class="nav-item">
-                <a href="performance_evaluation.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Masterlist">
-                    <span class="material-icons">assessment</span>
-                    <span>Performance Evaluation</span>
-                </a>
+                
             </li>
             <li class="nav-item">
                 <a href="archives.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Archives">

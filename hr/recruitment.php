@@ -384,10 +384,7 @@ try {
                 </a>
             </li>
             <li class="nav-item">
-                <a href="performance_evaluation.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Performance Evaluation">
-                    <span class="material-icons">assessment</span>
-                    <span>Performance Evaluation</span>
-                </a>
+                
             </li>
             <li class="nav-item">
                 <a href="archives.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Archives">
@@ -644,10 +641,7 @@ try {
                 <span class="material-icons">person_add</span>
                 <span>Recruitment</span>
             </a>
-            <a href="performance_evaluation.php" class="mobile-nav-item">
-                <span class="material-icons">assessment</span>
-                <span>Performance</span>
-            </a>
+            
             <a href="archives.php" class="mobile-nav-item">
                 <span class="material-icons">archive</span>
                 <span>Archives</span>

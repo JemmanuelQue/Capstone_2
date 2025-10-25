@@ -81,6 +81,14 @@ $allEvaluations = $evaluationsStmt->fetchAll(PDO::FETCH_ASSOC);
 // Get latest evaluation
 $latestEvaluation = !empty($allEvaluations) ? $allEvaluations[0] : null;
 
+// Fetch detailed ratings for the latest evaluation (if any)
+$latestRatings = [];
+if ($latestEvaluation && !empty($latestEvaluation['evaluation_id'])) {
+    $ratingsStmt = $conn->prepare("SELECT criterion_name, rating_score, comments FROM evaluation_ratings WHERE evaluation_id = ? ORDER BY rating_id ASC");
+    $ratingsStmt->execute([$latestEvaluation['evaluation_id']]);
+    $latestRatings = $ratingsStmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 $guardName = trim($guard['First_Name'] . ' ' . $guard['middle_name'] . ' ' . $guard['Last_Name']);
 
 // Calculate employment status
@@ -143,6 +151,12 @@ function getRatingColor($rating) {
         padding: 50px;
         color: #6c757d;
     }
+    /* Horizontal scroll helpers for tight mobile screens */
+    .mobile-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .mobile-scroll-inner { min-width: 520px; }
     
     /* Mobile responsive table - Show all details */
     @media (max-width: 768px) {
@@ -246,30 +260,32 @@ function getRatingColor($rating) {
             </div>
             <div class="col-md-3 text-center">
                 <div class="rating-display text-info">
-                    12
+                    <?php echo count($latestRatings); ?>
                 </div>
-                <div class="fs-5 text-info">Rating Criteria</div>
+                <div class="fs-5 text-info">Criteria Rated</div>
                 <small class="text-muted">Total Evaluated</small>
             </div>
             <div class="col-md-6">
-                <table class="table table-sm">
-                    <tr>
-                        <td><strong>Evaluation Date:</strong></td>
-                        <td><?php echo date('M d, Y', strtotime($latestEvaluation['evaluation_date'])); ?></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Employee Name:</strong></td>
-                        <td><?php echo htmlspecialchars($latestEvaluation['employee_name']); ?></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Position:</strong></td>
-                        <td><?php echo htmlspecialchars($latestEvaluation['position'] ?: 'Security Guard'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Status:</strong></td>
-                        <td><span class="badge bg-success"><?php echo $latestEvaluation['status']; ?></span></td>
-                    </tr>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Evaluation Date:</strong></td>
+                            <td><?php echo date('M d, Y', strtotime($latestEvaluation['evaluation_date'])); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Employee Name:</strong></td>
+                            <td><?php echo htmlspecialchars($latestEvaluation['employee_name']); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Position:</strong></td>
+                            <td><?php echo htmlspecialchars($latestEvaluation['position'] ?: 'Security Guard'); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td><span class="badge bg-success"><?php echo $latestEvaluation['status']; ?></span></td>
+                        </tr>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -308,15 +324,58 @@ function getRatingColor($rating) {
                     <h5 class="text-primary">
                         <i class="material-icons">person</i> Evaluated By
                     </h5>
-                    <div class="border-start border-primary border-3 ps-3">
-                        <?php echo $latestEvaluation['evaluated_by'] ? htmlspecialchars($latestEvaluation['evaluated_by']) : '<em class="text-muted">No evaluator recorded</em>'; ?>
-                        <?php if ($latestEvaluation['client_representative']): ?>
-                            <br><small><strong>Client Rep:</strong> <?php echo htmlspecialchars($latestEvaluation['client_representative']); ?></small>
-                        <?php endif; ?>
-                        <?php if ($latestEvaluation['gmsai_representative']): ?>
-                            <br><small><strong>GMSAI Rep:</strong> <?php echo htmlspecialchars($latestEvaluation['gmsai_representative']); ?></small>
-                        <?php endif; ?>
+                    <div class="border-start border-primary border-3 ps-3 mobile-scroll">
+                        <div class="mobile-scroll-inner">
+                            <?php echo $latestEvaluation['evaluated_by'] ? htmlspecialchars($latestEvaluation['evaluated_by']) : '<em class="text-muted">No evaluator recorded</em>'; ?>
+                            <?php if ($latestEvaluation['client_representative']): ?>
+                                <br><small><strong>Client Rep:</strong> <?php echo htmlspecialchars($latestEvaluation['client_representative']); ?></small>
+                            <?php endif; ?>
+                            <?php if ($latestEvaluation['gmsai_representative']): ?>
+                                <br><small><strong>GMSAI Rep:</strong> <?php echo htmlspecialchars($latestEvaluation['gmsai_representative']); ?></small>
+                            <?php endif; ?>
+                        </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Criteria Breakdown -->
+        <div class="row">
+            <div class="col-12">
+                <div class="evaluation-section">
+                    <h5 class="text-secondary">
+                        <i class="material-icons">list</i> Criteria Breakdown
+                    </h5>
+                    <?php if (!empty($latestRatings)): ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width:280px;">Criterion</th>
+                                        <th style="width:140px;">Score</th>
+                                        <th>Comments</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($latestRatings as $r): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($r['criterion_name']); ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo getRatingColor((float)$r['rating_score']); ?>">
+                                                    <?php echo number_format((float)$r['rating_score'], 1); ?>%
+                                                </span>
+                                            </td>
+                                            <td><?php echo $r['comments'] ? htmlspecialchars($r['comments']) : '<em class="text-muted">—</em>'; ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="border-start border-secondary border-3 ps-3">
+                            <em class="text-muted">No detailed criterion ratings recorded for this evaluation.</em>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

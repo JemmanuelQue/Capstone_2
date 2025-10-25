@@ -344,7 +344,6 @@ $notStartedCount = count(array_filter($filteredGuards, function($g) { return $g[
         <div class="logo-container">
             <img src="../images/greenmeadows_logo.jpg" alt="Green Meadows Logo" class="logo">
             <div class="agency-name">
-                <div>GREEN MEADOWS</div>
                 <div>SECURITY AGENCY</div>
             </div>
         </div>
@@ -353,18 +352,6 @@ $notStartedCount = count(array_filter($filteredGuards, function($g) { return $g[
                 <a href="dashboard.php" class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
                     <span class="material-icons">dashboard</span>
                     <span>Dashboard</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="performance_evaluation.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Performance Evaluation">
-                    <span class="material-icons">assessment</span>
-                    <span>Performance Evaluation</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="view_evaluation.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="View Evaluations">
-                    <span class="material-icons">assignment_turned_in</span>
-                    <span>View Evaluations</span>
                 </a>
             </li>
             <li class="nav-item mt-5">

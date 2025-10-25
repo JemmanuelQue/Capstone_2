@@ -5,6 +5,10 @@ require_once '../db_connection.php'; // assumes $conn is PDO
 // Enforce HR role (3)
 if (!validateSession($conn, 3)) { exit; }
 
+// Feature disabled for HR: Performance Evaluation
+require_once __DIR__ . '/../errors/403.php';
+exit;
+
 $currentDate = date('Y-m-d');
 
 // Handle filter form submission

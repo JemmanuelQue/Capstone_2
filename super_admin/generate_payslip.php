@@ -31,12 +31,12 @@ if ($dateRange === '1-15') {
 
 // Fetch user and payroll data
 $stmt = $conn->prepare("SELECT 
-    CONCAT(first_name, ' ', 
-      CASE WHEN middle_name IS NOT NULL AND middle_name != '' 
-        THEN UPPER(LEFT(middle_name, 1)) || '. ' 
-        ELSE '' END, 
-    last_name) AS name 
-    FROM users WHERE user_id = ?");
+                CONCAT(First_Name, ' ', 
+                        CASE WHEN middle_name IS NOT NULL AND middle_name != '' 
+                                THEN CONCAT(UPPER(SUBSTRING(middle_name, 1, 1)), '. ') 
+                                ELSE '' END, 
+                Last_Name) AS name 
+                FROM users WHERE User_ID = ?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -62,31 +62,37 @@ $period = $monthLabel . ' ' . $startDateObj->format('d') . '-' . $endDateObj->fo
 
 $html = '
 <style>
-    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 8px; margin: 0; padding: 0; }
-    .header { text-align: center; font-weight: bold; font-size: 8.5px; margin-bottom: 1px; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 6px; margin: 0; padding: 0; }
+    .header { text-align: center; font-weight: bold; font-size: 6.5px; margin-bottom: 1px; }
     .main-table { width: 100%; border-collapse: collapse; }
-    .main-table td { vertical-align: top; padding: 0 4px 0 0; }
+    .main-table td { vertical-align: top; padding: 0 2px 0 0; }
     .left-col { width: 65%; }
     .right-col { width: 35%; }
-    .section-title { font-weight: bold; margin: 1px 0 1px 0; font-size: 7.5px; }
+    .section-title { font-weight: bold; margin: 1px 0 1px 0; font-size: 6px; }
     .earnings-table, .deductions-table { width: 100%; border-collapse: collapse; margin-bottom: 1px; }
-    .earnings-table th, .earnings-table td, .deductions-table th, .deductions-table td { padding: 0.5px 1px; font-size: 7px; }
+    .earnings-table th, .earnings-table td, .deductions-table th, .deductions-table td { padding: 0.3px 0.5px; font-size: 5.5px; }
     .earnings-table th, .deductions-table th { border-bottom: 1px solid #000; }
     .earnings-table .label, .deductions-table .label { width: 50%; }
     .earnings-table .hrs { width: 10%; text-align: center; }
     .earnings-table .value, .deductions-table .value { width: 40%; text-align: right; }
     .total-row { font-weight: bold; border-top: 1px solid #000; }
-    .netpay-row { font-weight: bold; font-size: 8px; border-top: 2px solid #000; margin-top: 1px; }
-    .summary-table { width: 100%; margin-top: 5px; }
-    .summary-table td { font-size: 7px; padding: 0.5px 1px; }
+    .netpay-row { font-weight: bold; font-size: 6px; border-top: 2px solid #000; margin-top: 1px; }
+    .summary-table { width: 100%; margin-top: 3px; }
+    .summary-table td { font-size: 5.5px; padding: 0.3px 0.5px; }
     .summary-table .label { width: 60%; }
     .summary-table .value { width: 40%; text-align: right; }
-    .big { font-size: 8px; font-weight: bold; }
+    .big { font-size: 6px; font-weight: bold; }
     .hr { border-bottom: 1px solid #000; margin: 1px 0; }
-    .agency { font-size:7px; margin-bottom: 1px; font-weight: bold; text-align: right; }
-    .empname { font-size:8px; font-weight:bold; margin-bottom: 1px; text-align: right; }
+    .agency { font-size:5.5px; margin-bottom: 1px; font-weight: bold; text-align: right; }
+    .empname { font-size:6px; font-weight:bold; margin-bottom: 1px; text-align: right; }
     .netpay-row { margin-top: 2px; }
+    .container { width: 50%; margin: 0; padding: 0; }
+    .wrapper { width: 100%; }
+    .left-position { text-align: left; }
+    .right { text-align: right; }
+    .small { font-size: 5.5px; }
 </style>
+<div class="container left-position">
 <div class="header">
     GREEN MEADOWS SECURITY AGENCY INC.<br>
     #348 Torres Street, Brgy. Mayapa, Calamba City<br>
@@ -139,6 +145,7 @@ $html = '
         </td>
     </tr>
 </table>
+</div>
 ';
 
 // Configure dompdf
@@ -149,7 +156,7 @@ $options->set('isRemoteEnabled', true);
 
 $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
-$dompdf->setPaper('A5', 'landscape');
+$dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 
 // Set filename: Guards [Name] - [Period], 2025.pdf

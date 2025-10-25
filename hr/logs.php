@@ -339,10 +339,7 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                 </a>
             </li>
             <li class="nav-item">
-                <a href="performance_evaluation.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Performance Evaluation">
-                    <span class="material-icons">assessment</span>
-                    <span>Performance Evaluation</span>
-                </a>
+                
             </li>
             <li class="nav-item">
                 <a href="archives.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Archives">
@@ -389,7 +386,7 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                 <div class="card mb-4">
                     <div class="card-body">
                         <form action="" method="GET" class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-6 col-md-3">
                                 <label for="activity_type" class="form-label">Activity Type</label>
                                 <select name="activity_type" id="activity_type" class="form-select">
                                     <option value="">All Activities</option>
@@ -445,36 +442,52 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-6 col-md-4">
                                 <label for="date_range" class="form-label">Date Range</label>
                                 <div class="input-group dropdown-input-group">
                                     <span class="input-group-text"><i class="material-icons">date_range</i></span>
                                     <input type="text" class="form-control dropdown-toggle" id="date_range" name="date_range" 
-                                           placeholder="Select date range" value="<?php echo (!empty($dateFrom) && !empty($dateTo)) ? date('m/d/Y', strtotime($dateFrom)) . ' - ' . date('m/d/Y', strtotime($dateTo)) : ''; ?>" 
+                                           placeholder="Date range..." value="<?php echo (!empty($dateFrom) && !empty($dateTo)) ? date('m/d/Y', strtotime($dateFrom)) . ' - ' . date('m/d/Y', strtotime($dateTo)) : ''; ?>" 
                                            readonly style="background-color: white; cursor: pointer;">
                                     <span class="input-group-text dropdown-indicator"><i class="material-icons">arrow_drop_down</i></span>
                                     <input type="hidden" id="date_from" name="date_from" value="<?php echo $dateFrom; ?>">
                                     <input type="hidden" id="date_to" name="date_to" value="<?php echo $dateTo; ?>">
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-7 col-md-3">
                                 <label for="search" class="form-label">Search</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" id="search" name="search" 
                                            placeholder="Details or names" value="<?php echo $searchTerm; ?>">
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="material-icons">search</i> Search
+                                        <i class="material-icons">search</i> 
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-1 d-flex align-items-end">
-                                <a href="logs.php" class="btn btn-primary w-100">
+                            <div class="col-5 col-md-1 d-flex align-items-end">
+                                <a href="logs.php" class="btn btn-primary w-75">
                                     <i class="material-icons align-middle">refresh</i>
                                 </a>
                             </div>
                         </form>
                     </div>
                 </div>
+
+                 <div class="col-6 col-md-3 d-flex align-items-end ms-auto mb-4" style="width: 150px;">
+
+                                <?php 
+                                // Build query string to preserve filters for PDF export
+                                $qs = http_build_query([
+                                    'activity_type' => $activityType,
+                                    'date_from' => $dateFrom,
+                                    'date_to' => $dateTo,
+                                    'search' => $searchTerm
+                                ]);
+                                ?>
+                                <a href="export_logs_pdf.php?<?php echo $qs; ?>" class="btn btn-danger w-100" target="_blank">
+                                    <i class="material-icons align-middle">picture_as_pdf</i> Export PDF
+                                </a>
+                            </div>
 
                 <!-- Activity Log Categories -->
                 <div class="accordion" id="activityLogsAccordion">
@@ -818,10 +831,7 @@ $categorizedLogs = array_merge($nonEmptyCategories, $emptyCategories);
                 <span class="material-icons">assignment</span>
                 <span class="mobile-nav-text">Masterlist</span>
             </a>
-            <a href="performance_evaluation.php" class="mobile-nav-item">
-                <span class="material-icons">assessment</span>
-                <span class="mobile-nav-text">Performance Evaluation</span>
-            </a>
+            
             <a href="archives.php" class="mobile-nav-item">
                 <span class="material-icons">archive</span>
                 <span class="mobile-nav-text">Archives</span>

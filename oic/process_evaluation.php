@@ -83,24 +83,60 @@ try {
         'attitude_conduct_comments' => $_POST['attitude_conduct_comments'] ?? ''
     ];
     
-    // Validate required fields
-    if (!$guard_id || !$evaluator_id || !$evaluation_period || !$recommendation) {
+    // Validate required fields with detailed feedback (recommendation optional)
+    $missing_required = [];
+    if (!$guard_id) $missing_required[] = 'guard_id';
+    if (!$evaluator_id) $missing_required[] = 'evaluator_id';
+    if (!$evaluation_period) $missing_required[] = 'evaluation_period';
+
+    if (!empty($missing_required)) {
         echo json_encode([
             'success' => false,
-            'message' => 'Missing required fields'
+            'message' => 'Missing required fields: ' . implode(', ', $missing_required),
+            'missing' => [ 'required' => $missing_required ]
         ]);
         exit;
     }
     
-    // Validate all ratings are provided
+    // Validate all ratings are provided with readable labels
+    $ratingLabels = [
+        'tech_job_knowledge' => 'Technical: Job Knowledge',
+        'tech_tool_competency' => 'Technical: Tool Competency',
+        'tech_safety_procedure' => 'Technical: Safety Procedure Compliance',
+        'quality_accuracy' => 'Quality: Accuracy',
+        'quality_completeness' => 'Quality: Completeness',
+        'quality_reliability' => 'Quality: Reliability',
+        'productivity_time' => 'Productivity: Time Management',
+        'productivity_output' => 'Productivity: Output',
+        'productivity_priority' => 'Productivity: Priority Handling',
+        'diligence_instructions' => 'Diligence: Follows Instructions',
+        'diligence_flexibility' => 'Diligence: Flexibility/Adaptability',
+        'diligence_customer' => 'Diligence: Customer Service',
+        'attendance_presence' => 'Attendance: Presence',
+        'attendance_punctuality' => 'Attendance: Punctuality',
+        'interpersonal_communication' => 'Interpersonal: Communication',
+        'interpersonal_teamwork' => 'Interpersonal: Teamwork',
+        'attitude_conduct' => 'Attitude & Conduct'
+    ];
+
+    $missing_ratings = [];
     foreach ($ratings as $key => $value) {
         if ($value === null || $value === '') {
-            echo json_encode([
-                'success' => false,
-                'message' => 'All rating criteria must be completed'
-            ]);
-            exit;
+            $missing_ratings[] = $ratingLabels[$key] ?? $key;
         }
+    }
+    if (!empty($missing_ratings)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Missing rating criteria: ' . implode(', ', $missing_ratings),
+            'missing' => [ 'ratings' => $missing_ratings ]
+        ]);
+        exit;
+    }
+
+    // Allow recommendation to be blank; provide a safe default for insert
+    if ($recommendation === null || $recommendation === '') {
+        $recommendation = 'No recommendation';
     }
     
     // Verify the evaluator is an OIC and has permission to evaluate this guard
@@ -178,49 +214,43 @@ try {
 
     $evaluation_id = $conn->lastInsertId();
     
-    // Insert detailed ratings into evaluation_ratings table (if it exists)
+    // Insert detailed ratings into evaluation_ratings (normalized rows per criterion)
     try {
         $ratingInsertQuery = "
-            INSERT INTO evaluation_ratings (
-                evaluation_id, 
-                tech_job_knowledge, tech_tool_competency, tech_safety_procedure,
-                quality_accuracy, quality_completeness, quality_reliability,
-                productivity_time, productivity_output, productivity_priority,
-                diligence_instructions, diligence_flexibility, diligence_customer,
-                attendance_presence, attendance_punctuality,
-                interpersonal_communication, interpersonal_teamwork, attitude_conduct,
-                tech_job_knowledge_comments, tech_tool_competency_comments, tech_safety_procedure_comments,
-                quality_accuracy_comments, quality_completeness_comments, quality_reliability_comments,
-                productivity_time_comments, productivity_output_comments, productivity_priority_comments,
-                diligence_instructions_comments, diligence_flexibility_comments, diligence_customer_comments,
-                attendance_presence_comments, attendance_punctuality_comments,
-                interpersonal_communication_comments, interpersonal_teamwork_comments, attitude_conduct_comments
-            ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-            )
+            INSERT INTO evaluation_ratings (evaluation_id, criterion_name, rating_score, comments)
+            VALUES (?, ?, ?, ?)
         ";
-        
         $ratingStmt = $conn->prepare($ratingInsertQuery);
-        $ratingStmt->execute([
-            $evaluation_id,
-            // Rating values (17 criteria)
-            $ratings['tech_job_knowledge'], $ratings['tech_tool_competency'], $ratings['tech_safety_procedure'],
-            $ratings['quality_accuracy'], $ratings['quality_completeness'], $ratings['quality_reliability'],
-            $ratings['productivity_time'], $ratings['productivity_output'], $ratings['productivity_priority'],
-            $ratings['diligence_instructions'], $ratings['diligence_flexibility'], $ratings['diligence_customer'],
-            $ratings['attendance_presence'], $ratings['attendance_punctuality'],
-            $ratings['interpersonal_communication'], $ratings['interpersonal_teamwork'], $ratings['attitude_conduct'],
-            // Comment values (17 criteria)
-            $comments['tech_job_knowledge_comments'], $comments['tech_tool_competency_comments'], $comments['tech_safety_procedure_comments'],
-            $comments['quality_accuracy_comments'], $comments['quality_completeness_comments'], $comments['quality_reliability_comments'],
-            $comments['productivity_time_comments'], $comments['productivity_output_comments'], $comments['productivity_priority_comments'],
-            $comments['diligence_instructions_comments'], $comments['diligence_flexibility_comments'], $comments['diligence_customer_comments'],
-            $comments['attendance_presence_comments'], $comments['attendance_punctuality_comments'],
-            $comments['interpersonal_communication_comments'], $comments['interpersonal_teamwork_comments'], $comments['attitude_conduct_comments']
-        ]);
+
+        // Map OIC form keys to human-readable criterion names
+        $criterionNames = [
+            'tech_job_knowledge' => 'Technical Skills - Job Knowledge',
+            'tech_tool_competency' => 'Technical Skills - Tool Competency',
+            'tech_safety_procedure' => 'Technical Skills - Safety Procedure',
+            'quality_accuracy' => 'Quality - Accuracy',
+            'quality_completeness' => 'Quality - Completeness/Orderliness',
+            'quality_reliability' => 'Quality - Reliability',
+            'productivity_time' => 'Productivity - Time Management',
+            'productivity_output' => 'Productivity - Output',
+            'productivity_priority' => 'Productivity - Priority Setting',
+            'diligence_instructions' => 'Diligence - Follows Instructions',
+            'diligence_flexibility' => 'Diligence - Flexibility/Adaptable',
+            'diligence_customer' => 'Diligence - Customer Focus',
+            'attendance_presence' => 'Attendance - Presence',
+            'attendance_punctuality' => 'Attendance - Punctuality',
+            'interpersonal_communication' => 'Interpersonal - Communication',
+            'interpersonal_teamwork' => 'Interpersonal - Teamwork',
+            'attitude_conduct' => 'Work Attitude - Conduct and Behavior'
+        ];
+
+        foreach ($ratings as $key => $score) {
+            $criterionName = $criterionNames[$key] ?? $key;
+            $comment = $comments[$key . '_comments'] ?? '';
+            $ratingStmt->execute([$evaluation_id, $criterionName, $score, $comment]);
+        }
     } catch (Exception $e) {
-        // evaluation_ratings table might not exist, continue without it
+        error_log('OIC evaluation_ratings insert failed: ' . $e->getMessage());
+        // Continue even if ratings insert fails to avoid blocking the main evaluation record
     }
     
     // Log the activity

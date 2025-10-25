@@ -275,10 +275,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                 </a>
             </li>
             <li class="nav-item">
-                <a href="performance_evaluation.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Performance Evaluation">
-                    <span class="material-icons">assessment</span>
-                    <span>Performance Evaluation</span>
-                </a>
+                
             </li>
             <li class="nav-item">
                 <a href="archives.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Archives">
@@ -427,7 +424,7 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
                                 </table>
                             </div>
                             <div class="p-2 text-end">
-                                <a href="performance_evaluation.php" class="btn btn-sm btn-outline-primary">View All</a>
+                                
                             </div>
                         </div>
                     </div>
@@ -527,10 +524,6 @@ if ($profileData && !empty($profileData['Profile_Pic']) && file_exists($profileD
             <a href="masterlist.php" class="mobile-nav-item">
                 <span class="material-icons">list</span>
                 <span class="mobile-nav-text">Masterlist</span>
-            </a>
-            <a href="performance_evaluation.php" class="mobile-nav-item">
-                <span class="material-icons">assessment</span>
-                <span class="mobile-nav-text">Performance Evaluation</span>
             </a>
             <a href="archives.php" class="mobile-nav-item">
                 <span class="material-icons">archive</span>
