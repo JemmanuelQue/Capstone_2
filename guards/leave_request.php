@@ -260,6 +260,7 @@ for ($year = $currentYear; $year >= $currentYear - 3; $year--) {
                                     <th>Leave Type</th>
                                     <th>Period</th>
                                     <th>Reason</th>
+                                    <th>Proof</th>
                                     <th>Requested On</th>
                                     <th>Status</th>
                                 </tr>
@@ -306,6 +307,15 @@ for ($year = $currentYear; $year >= $currentYear - 3; $year--) {
                                                 ?>
                                             </td>
                                             <td><?php echo $request['Leave_Reason']; ?></td>
+                                            <td>
+                                                <?php if (isset($request['proof']) && !empty($request['proof']) && file_exists(__DIR__ . '/../' . $request['proof'])): ?>
+                                                    <a class="btn btn-outline-secondary btn-sm" href="<?php echo '../' . htmlspecialchars($request['proof']); ?>" target="_blank">
+                                                        <i class="material-icons align-middle" style="font-size: 16px;">attach_file</i> View
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted">—</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><?php echo date('M j, Y', strtotime($request['Request_Date'])); ?></td>
                                             <td>
                                                 <?php 
@@ -350,7 +360,7 @@ for ($year = $currentYear; $year >= $currentYear - 3; $year--) {
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form id="leaveRequestForm" action="submit_leave_request.php" method="POST">
+                        <form id="leaveRequestForm" action="submit_leave_request.php" method="POST" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label for="leaveType" class="form-label">Leave Type</label>
                                 <select class="form-select" id="leaveType" name="leaveType" required>
@@ -373,6 +383,11 @@ for ($year = $currentYear; $year >= $currentYear - 3; $year--) {
                             <div class="mb-3">
                                 <label for="leaveReason" class="form-label">Reason for Leave</label>
                                 <textarea class="form-control" id="leaveReason" name="leaveReason" rows="3" required placeholder="Please provide details about your leave request"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="proof_file" class="form-label">Attach Proof (required)</label>
+                                <input type="file" class="form-control" id="proof_file" name="proof_file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" required>
+                                <div class="form-text">Accepted: PDF, JPG, JPEG, PNG, GIF, WEBP. Max 5MB.</div>
                             </div>
                             <div class="text-end">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -524,6 +539,15 @@ for ($year = $currentYear; $year >= $currentYear - 3; $year--) {
                         break;
                     case '5':
                         title = 'Date Conflict';
+                        break;
+                    case '6':
+                        title = 'Attachment Required';
+                        break;
+                    case '7':
+                        title = 'Attachment Error';
+                        break;
+                    case '8':
+                        title = 'Upload Failed';
                         break;
                 }
                 

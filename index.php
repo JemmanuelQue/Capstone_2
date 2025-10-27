@@ -21,7 +21,7 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['role_id'])) {
             exit();
     }
 }
-?>dsfdsfd
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

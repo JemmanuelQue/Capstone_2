@@ -29,7 +29,7 @@ if (!$user) {
 $profilePic = (!empty($user['Profile_Pic']) && file_exists($user['Profile_Pic'])) ? $user['Profile_Pic'] : '../images/default_profile.png';
 
 // Map role id to label (basic)
-$roles = [1=>'Super Admin',2=>'Admin',3=>'HR',4=>'Accounting',5=>'Guard',8=>'OIC'];
+$roles = [1=>'Super Admin',2=>'Admin',3=>'HR',4=>'Accounting',5=>'Guard'];
 $roleLabel = isset($roles[$user['Role_ID']]) ? $roles[$user['Role_ID']] : 'User';
 ?>
 <!DOCTYPE html>
@@ -67,7 +67,7 @@ $roleLabel = isset($roles[$user['Role_ID']]) ? $roles[$user['Role_ID']] : 'User'
     <div class="container-xxl py-4">
            <div class="d-flex justify-content-end mb-3">
             <?php
-            $backPage = isset($_SESSION['last_page']) ? $_SESSION['last_page'] : 'dashboard.php';
+            $backPage = isset($_SESSION['last_page']) ? $_SESSION['last_page'] : 'superadmin_dashboard.php';
             ?>
             <a href="<?php echo htmlspecialchars($backPage); ?>" class="btn btn-outline-secondary btn-sm"><span class="material-icons" style="font-size:18px; vertical-align:middle;">arrow_back</span> Back</a>
         </div>
@@ -186,6 +186,55 @@ $roleLabel = isset($roles[$user['Role_ID']]) ? $roles[$user['Role_ID']] : 'User'
                         <div class="alert alert-info mt-3 mb-0">For any wrong details please contact HR department or Super Admin.</div>
                     </div>
                 </div>
+
+                <!-- Change Password -->
+                <div class="card card-tight shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="h6 mb-3">Change Password</div>
+                        <form method="POST" action="change_password.php" id="changePasswordForm" autocomplete="off" novalidate>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Current Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" name="current_password" id="currentPassword" placeholder="Enter current password" aria-describedby="currentPasswordHelp" required>
+                                        <button class="btn btn-outline-secondary" type="button" id="toggleCurrentPassword" aria-label="Show password">
+                                            <span class="material-icons" aria-hidden="true">visibility</span>
+                                        </button>
+                                    </div>
+                                    <div class="form-text" id="currentPasswordHelp">
+                                        Can't remember your current password? <a href="../forgot_password.php" target="_blank" rel="noopener">Reset it here</a>.
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">New Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" name="new_password" id="newPassword" placeholder="Enter new password" minlength="8" required pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\{\}\[\]:;,.\?\/])[A-Za-z0-9!@#$%^&*()_\-+=\{\}\[\]:;,.\?\/]{8,}$" aria-describedby="passwordHelp">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword" aria-label="Show password">
+                                            <span class="material-icons" aria-hidden="true">visibility</span>
+                                        </button>
+                                    </div>
+                                    <div class="form-text" id="passwordHelp">
+                                        Must include at least 1 uppercase, 1 lowercase, 1 number, and 1 special from: ! @ # $ % ^ & * ( ) _ - + = { } [ ] : ; , . ? /
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" name="confirm_password" id="confirmPassword" placeholder="Re-type new password" minlength="8" required pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\{\}\[\]:;,.\?\/])[A-Za-z0-9!@#$%^&*()_\-+=\{\}\[\]:;,.\?\/]{8,}$">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword" aria-label="Show password">
+                                            <span class="material-icons" aria-hidden="true">visibility</span>
+                                        </button>
+                                    </div>
+                                    <div class="invalid-feedback" id="pwMatchFeedback">Passwords do not match</div>
+                                </div>
+                                <div class="col-12 text-end">
+                                    <button type="submit" class="btn btn-primary">Update Password</button>
+                                </div>
+                            </div>
+                        </form>
+                        <small class="text-muted d-block mt-2">Tip: Use a strong password with letters, numbers, and symbols.</small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -207,6 +256,71 @@ $roleLabel = isset($roles[$user['Role_ID']]) ? $roles[$user['Role_ID']] : 'User'
                 reader.readAsDataURL(file);
             });
         }
+
+        // Simple password match validation
+        const newPw = document.getElementById('newPassword');
+        const confPw = document.getElementById('confirmPassword');
+        const matchFeedback = document.getElementById('pwMatchFeedback');
+        function checkPwMatch() {
+            if (!newPw || !confPw) return true;
+            const ok = newPw.value && confPw.value && newPw.value === confPw.value;
+            if (!ok && confPw.value) {
+                confPw.classList.add('is-invalid');
+            } else {
+                confPw.classList.remove('is-invalid');
+            }
+            return ok;
+        }
+        if (newPw && confPw) {
+            newPw.addEventListener('input', checkPwMatch);
+            confPw.addEventListener('input', checkPwMatch);
+            const form = document.getElementById('changePasswordForm');
+            form && form.addEventListener('submit', (e) => {
+                if (!checkPwMatch()) {
+                    e.preventDefault();
+                    confPw.focus();
+                }
+            });
+            // Disallowed characters live check
+            const disallowed = /['"`\\|<>~]/;
+            function validateComplexity(el) {
+                const val = el.value || '';
+                if (disallowed.test(val)) {
+                    el.setCustomValidity('Contains disallowed characters.');
+                    return;
+                }
+                const errs = [];
+                if (val.length > 0) {
+                    if (val.length < 8) errs.push('Min 8 characters');
+                    if (!/[A-Z]/.test(val)) errs.push('1 uppercase');
+                    if (!/[a-z]/.test(val)) errs.push('1 lowercase');
+                    if (!/[0-9]/.test(val)) errs.push('1 number');
+                    if (!/[!@#$%^&*()_\-+=\{\}\[\]:;,.\?\/]/.test(val)) errs.push('1 special (!@#$%^&*()_-+={}[]:;,.?/ )');
+                }
+                el.setCustomValidity(errs.length ? errs.join(' • ') : '');
+            }
+            newPw.addEventListener('input', () => validateComplexity(newPw));
+            confPw.addEventListener('input', () => validateComplexity(confPw));
+            validateComplexity(newPw);
+            validateComplexity(confPw);
+        }
+
+        // Toggle password visibility helpers
+        function wireToggle(btnId, inputId) {
+            const btn = document.getElementById(btnId);
+            const inp = document.getElementById(inputId);
+            if (!btn || !inp) return;
+            const icon = btn.querySelector('.material-icons');
+            btn.addEventListener('click', () => {
+                const isPassword = inp.getAttribute('type') === 'password';
+                inp.setAttribute('type', isPassword ? 'text' : 'password');
+                if (icon) icon.textContent = isPassword ? 'visibility_off' : 'visibility';
+                btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+            });
+        }
+        wireToggle('toggleCurrentPassword', 'currentPassword');
+        wireToggle('toggleNewPassword', 'newPassword');
+        wireToggle('toggleConfirmPassword', 'confirmPassword');
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <?php if (isset($_SESSION['profilepic_success'])): ?>
@@ -233,5 +347,17 @@ $roleLabel = isset($roles[$user['Role_ID']]) ? $roles[$user['Role_ID']] : 'User'
         ToastErr.fire({ icon: 'error', title: <?php echo json_encode($_SESSION['profilepic_error']); ?> });
     </script>
     <?php unset($_SESSION['profilepic_error']); endif; ?>
+    <?php if (isset($_SESSION['password_success'])): ?>
+    <script>
+        const ToastPwOk = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+        ToastPwOk.fire({ icon: 'success', title: <?php echo json_encode($_SESSION['password_success']); ?> });
+    </script>
+    <?php unset($_SESSION['password_success']); endif; ?>
+    <?php if (isset($_SESSION['password_error'])): ?>
+    <script>
+        const ToastPwErr = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+        ToastPwErr.fire({ icon: 'error', title: <?php echo json_encode($_SESSION['password_error']); ?> });
+    </script>
+    <?php unset($_SESSION['password_error']); endif; ?>
 </body>
 </html>

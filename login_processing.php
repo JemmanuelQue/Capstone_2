@@ -6,7 +6,7 @@ include 'db_connection.php';
 if (!isset($conn)) {
     die("Database connection failed");
 }
-asdasdasdasdas
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';

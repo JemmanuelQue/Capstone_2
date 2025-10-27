@@ -71,11 +71,12 @@ function getEmployeeDetails() {
     if ($user_id === '') { echo '<div class="alert alert-danger">User ID is required</div>'; return; }
 
     try {
-        $stmt = $conn->prepare("SELECT u.*, r.Role_Name, gl.location_name as guard_location,
+    $stmt = $conn->prepare("SELECT u.*, r.Role_Name, COALESCE(gl.location_name, ol.location_name) as guard_location,
                                        g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number
                                 FROM users u
                                 LEFT JOIN roles r ON u.Role_ID = r.Role_ID
-                                LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
+                LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
+                LEFT JOIN oic_locations ol ON u.User_ID = ol.oic_user_id AND ol.is_active = 1
                                 LEFT JOIN govt_details g ON u.User_ID = g.user_id
                                 WHERE u.User_ID = ? AND u.archived_at IS NULL");
         $stmt->execute([$user_id]);
@@ -131,7 +132,7 @@ function getEmployeeDetails() {
                     <tr><th>Hire Date:</th><td>" . ($user['hired_date'] ? date('M j, Y', strtotime($user['hired_date'])) : 'Not set') . "</td></tr>
                     <tr><th>Length of Service:</th><td>{$serviceLength}</td></tr>
                     <tr><th>Status:</th><td><span class='badge " . ($user['status'] === 'Active' ? 'bg-success' : 'bg-danger') . "'>" . htmlspecialchars($user['status']) . "</span></td></tr>";
-        if ((int)$user['Role_ID'] === 5 && !empty($user['guard_location'])) {
+        if (in_array((int)$user['Role_ID'], [5, 8], true) && !empty($user['guard_location'])) {
             $html .= "<tr><th>Location:</th><td>" . htmlspecialchars($user['guard_location']) . "</td></tr>";
         }
         $html .= "
@@ -171,11 +172,12 @@ function getEmployeeEditForm() {
     if ($user_id === '') { echo '<div class="alert alert-danger">User ID is required</div>'; return; }
 
     try {
-        $stmt = $conn->prepare("SELECT u.*, r.Role_Name, gl.location_name as guard_location,
+    $stmt = $conn->prepare("SELECT u.*, r.Role_Name, COALESCE(gl.location_name, ol.location_name) as guard_location,
                                        g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number
                                 FROM users u
                                 LEFT JOIN roles r ON u.Role_ID = r.Role_ID
-                                LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
+                LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
+                LEFT JOIN oic_locations ol ON u.User_ID = ol.oic_user_id AND ol.is_active = 1
                                 LEFT JOIN govt_details g ON u.User_ID = g.user_id
                                 WHERE u.User_ID = ? AND u.archived_at IS NULL");
         $stmt->execute([$user_id]);
@@ -183,8 +185,14 @@ function getEmployeeEditForm() {
         if (!$user) { echo '<div class="alert alert-danger">Employee not found</div>'; return; }
 
         $locations = [];
-        if ((int)$user['Role_ID'] === 5) {
-            $locationsStmt = $conn->prepare('SELECT DISTINCT location_name FROM guard_locations ORDER BY location_name');
+        if (in_array((int)$user['Role_ID'], [5, 8], true)) {
+            // Union list of known locations from both guard and OIC tables
+            $locationsStmt = $conn->prepare('SELECT location_name FROM (
+                                                SELECT DISTINCT location_name FROM guard_locations
+                                                UNION
+                                                SELECT DISTINCT location_name FROM oic_locations
+                                            ) AS locs
+                                            ORDER BY location_name');
             $locationsStmt->execute();
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
         }
@@ -266,7 +274,7 @@ function getEmployeeEditForm() {
                     <label class='form-label'>Hire Date <span class='text-danger'>*</span></label>
                     <input type='date' class='form-control' name='hire_date' value='" . htmlspecialchars($user['hired_date'] ?? '') . "' required>
                 </div>";
-        if ((int)$user['Role_ID'] === 5) {
+        if (in_array((int)$user['Role_ID'], [5, 8], true)) {
             echo "
                 <div class='col-12'>
                     <label class='form-label'>Guard Location <span class='text-danger'>*</span></label>
@@ -341,7 +349,7 @@ function addUser() {
         $superAdminName = $superAdminData ? $superAdminData['First_Name'] . ' ' . $superAdminData['Last_Name'] : "Super Admin";
         
         // Get form data
-        $role_id = $_POST['role_id'] ?? '';
+    $role_id = isset($_POST['role_id']) ? (int)$_POST['role_id'] : 0;
         $first_name = $_POST['first_name'] ?? '';
         $last_name = $_POST['last_name'] ?? '';
         $middle_name = $_POST['middle_name'] ?? '';
@@ -367,6 +375,13 @@ function addUser() {
         // Validate employee type
         if (empty($employee_type) || !in_array($employee_type, ['new', 'old'], true)) {
             echo json_encode(['success' => false, 'message' => 'Please select a valid employee type']);
+            return;
+        }
+
+        // Validate role id (support OIC = 8)
+        $allowedRoles = [1, 2, 3, 4, 5, 8]; // Super Admin, Admin, HR, Accounting, Guard, OIC
+        if (!in_array($role_id, $allowedRoles, true)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid role selected']);
             return;
         }
         
@@ -448,8 +463,8 @@ function addUser() {
             return;
         }
         
-        // Additional validation for guards
-        if ($role_id == 5 && empty($guard_location)) {
+        // Additional validation for roles requiring location (Guard, OIC)
+        if (in_array($role_id, [5, 8], true) && empty($guard_location)) {
             echo json_encode(['success' => false, 'message' => 'Guard location is required for security guards']);
             return;
         }
@@ -540,7 +555,16 @@ function addUser() {
         $roleStmt = $conn->prepare("SELECT Role_Name FROM roles WHERE Role_ID = ?");
         $roleStmt->execute([$role_id]);
         $roleData = $roleStmt->fetch(PDO::FETCH_ASSOC);
-        $role_name = $roleData ? $roleData['Role_Name'] : 'Unknown Role';
+        // Fallback map in case roles table doesn't have the new role yet
+        $roleFallback = [
+            1 => 'Super Admin',
+            2 => 'Admin',
+            3 => 'Human Resource',
+            4 => 'Accounting',
+            5 => 'Guard',
+            8 => 'OIC'
+        ];
+        $role_name = $roleData['Role_Name'] ?? ($roleFallback[$role_id] ?? 'Unknown Role');
         
         // Begin transaction
         $conn->beginTransaction();
@@ -574,8 +598,8 @@ function addUser() {
             $new_user_id = $conn->lastInsertId();
             
             // If it's a guard, add location information
-            if ($role_id == 5 && !empty($guard_location)) {
-                // Get or create location rate from guard_locations table
+            if (in_array($role_id, [5, 8], true) && !empty($guard_location)) {
+                // Lookup base daily rate from guard_locations as the master rate table
                 $locationStmt = $conn->prepare("SELECT daily_rate FROM guard_locations WHERE location_name = ? LIMIT 1");
                 $locationStmt->execute([$guard_location]);
                 $locationData = $locationStmt->fetch(PDO::FETCH_ASSOC);
@@ -598,9 +622,15 @@ function addUser() {
                 $lat = $locationCoords[$guard_location]['lat'] ?? 0.0;
                 $lng = $locationCoords[$guard_location]['lng'] ?? 0.0;
 
-                // Insert guard location with coordinates
-                $guardLocationStmt = $conn->prepare("INSERT INTO guard_locations (user_id, location_name, daily_rate, is_primary, designated_latitude, designated_longitude, allowed_radius) VALUES (?, ?, ?, 1, ?, ?, 100)");
-                $guardLocationStmt->execute([$new_user_id, $guard_location, $daily_rate, $lat, $lng]);
+                if ($role_id === 5) {
+                    // Guard primary location
+                    $stmtIns = $conn->prepare("INSERT INTO guard_locations (user_id, location_name, daily_rate, is_primary, designated_latitude, designated_longitude, allowed_radius) VALUES (?, ?, ?, 1, ?, ?, 100)");
+                    $stmtIns->execute([$new_user_id, $guard_location, $daily_rate, $lat, $lng]);
+                } else {
+                    // OIC assignment (no coords/rates)
+                    $stmtIns = $conn->prepare("INSERT INTO oic_locations (oic_user_id, location_name, assigned_by, is_active) VALUES (?, ?, ?, 1)");
+                    $stmtIns->execute([$new_user_id, $guard_location, $_SESSION['user_id']]);
+                }
             }
             
             // Insert government details (now required)
@@ -669,7 +699,7 @@ function addUser() {
             // Log the activity
             $logStmt = $conn->prepare("INSERT INTO activity_logs (User_ID, Activity_Type, Activity_Details) VALUES (?, 'User Creation', ?)");
             $logDetails = "{$superAdminName} created new user: {$first_name} {$last_name} (Role: {$role_name})";
-            if ($role_id == 5) {
+            if (in_array($role_id, [5, 8], true)) {
                 $logDetails .= " (Location: {$guard_location})";
             }
             $logStmt->execute([$_SESSION['user_id'], $logDetails]);
@@ -785,8 +815,9 @@ function editEmployee() {
         $updateQuery = 'UPDATE users SET ' . implode(', ', $updateFields) . ' WHERE User_ID = ?';
         $conn->prepare($updateQuery)->execute($updateValues);
 
-        // Guard location
-        if ((int)$currentUser['Role_ID'] === 5 && !empty($guard_location)) {
+        // Location update for roles requiring location (Guard, OIC)
+        if (in_array((int)$currentUser['Role_ID'], [5, 8], true) && !empty($guard_location)) {
+            // Base daily rate from guard_locations master rates
             $locationStmt = $conn->prepare('SELECT daily_rate FROM guard_locations WHERE location_name = ? LIMIT 1');
             $locationStmt->execute([$guard_location]);
             $locationData = $locationStmt->fetch(PDO::FETCH_ASSOC);
@@ -806,14 +837,22 @@ function editEmployee() {
             $lat = $locationCoords[$guard_location]['lat'] ?? 0.0;
             $lng = $locationCoords[$guard_location]['lng'] ?? 0.0;
 
-            $checkLocationStmt = $conn->prepare('SELECT COUNT(*) as count FROM guard_locations WHERE user_id = ? AND is_primary = 1');
-            $checkLocationStmt->execute([$user_id]);
-            if ($checkLocationStmt->fetch(PDO::FETCH_ASSOC)['count'] > 0) {
-                $conn->prepare('UPDATE guard_locations SET location_name = ?, daily_rate = ?, designated_latitude = ?, designated_longitude = ? WHERE user_id = ? AND is_primary = 1')
-                     ->execute([$guard_location, $daily_rate, $lat, $lng, $user_id]);
+            if ((int)$currentUser['Role_ID'] === 5) {
+                $checkLocationStmt = $conn->prepare('SELECT COUNT(*) as count FROM guard_locations WHERE user_id = ? AND is_primary = 1');
+                $checkLocationStmt->execute([$user_id]);
+                if ($checkLocationStmt->fetch(PDO::FETCH_ASSOC)['count'] > 0) {
+                    $conn->prepare('UPDATE guard_locations SET location_name = ?, daily_rate = ?, designated_latitude = ?, designated_longitude = ? WHERE user_id = ? AND is_primary = 1')
+                         ->execute([$guard_location, $daily_rate, $lat, $lng, $user_id]);
+                } else {
+                    $conn->prepare('INSERT INTO guard_locations (user_id, location_name, daily_rate, is_primary, designated_latitude, designated_longitude, allowed_radius, created_at) VALUES (?, ?, ?, 1, ?, ?, 100, NOW())')
+                         ->execute([$user_id, $guard_location, $daily_rate, $lat, $lng]);
+                }
             } else {
-                $conn->prepare('INSERT INTO guard_locations (user_id, location_name, daily_rate, is_primary, designated_latitude, designated_longitude, allowed_radius, created_at) VALUES (?, ?, ?, 1, ?, ?, 100, NOW())')
-                     ->execute([$user_id, $guard_location, $daily_rate, $lat, $lng]);
+                // OIC: keep only one active assignment
+                $conn->prepare('UPDATE oic_locations SET is_active = 0 WHERE oic_user_id = ?')
+                     ->execute([$user_id]);
+                $conn->prepare('INSERT INTO oic_locations (oic_user_id, location_name, assigned_by, is_active) VALUES (?, ?, ?, 1)')
+                     ->execute([$user_id, $guard_location, $_SESSION['user_id']]);
             }
         }
 

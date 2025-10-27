@@ -38,8 +38,8 @@ try {
     $allRoles = [];
 }
 
-// Department options limited to: Super Admin(1), Admin(2), HR(3), Accounting(4)
-$desiredDeptIds = [1,2,3,4,5];
+// Department options limited to: Super Admin(1), Admin(2), HR(3), Accounting(4), Guard(5), OIC(8)
+$desiredDeptIds = [1,2,3,4,5,8];
 $allRolesById = [];
 foreach ($allRoles as $r) { $allRolesById[(int)$r['Role_ID']] = $r; }
 $deptRoles = [];
@@ -578,8 +578,8 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                         <div class="step-content" id="step1">
                             <h6 class="mb-3">Select Employee Role</h6>
                             <div class="row g-3">
-                                <div class="col-md-4">
-                                    <div class="card role-card" data-role="3" data-role-name="Accounting">
+                                <div class="col-md-3">
+                                    <div class="card role-card" data-role="4" data-role-name="Accounting">
                                         <div class="card-body text-center">
                                             <i class="material-icons mb-2" style="font-size: 48px; color: #28a745;">calculate</i>
                                             <h6>Accounting</h6>
@@ -587,8 +587,8 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="card role-card" data-role="4" data-role-name="Human Resource">
+                                <div class="col-md-3">
+                                    <div class="card role-card" data-role="3" data-role-name="Human Resource">
                                         <div class="card-body text-center">
                                             <i class="material-icons mb-2" style="font-size: 48px; color: #17a2b8;">people</i>
                                             <h6>Human Resource</h6>
@@ -596,12 +596,21 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="card role-card" data-role="5" data-role-name="Security Guard">
                                         <div class="card-body text-center">
                                             <i class="material-icons mb-2" style="font-size: 48px; color: #ffc107;">security</i>
                                             <h6>Security Guard</h6>
                                             <p class="text-muted small">Provides security services at client locations</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card role-card" data-role="8" data-role-name="OIC">
+                                        <div class="card-body text-center">
+                                            <i class="material-icons mb-2" style="font-size: 48px; color: #6f42c1;">manage_accounts</i>
+                                            <h6>OIC</h6>
+                                            <p class="text-muted small">Officer in Charge for site oversight</p>
                                         </div>
                                     </div>
                                 </div>
@@ -686,11 +695,12 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                                     <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="col-12" id="locationSection" style="display: none;">
-                                    <label for="guardLocation" class="form-label">Guard Location <span class="required">*</span></label>
+                                    <label for="guardLocation" class="form-label"><span id="locationLabel">Guard Location</span> <span class="required">*</span></label>
                                     <select class="form-select" id="guardLocation" name="guard_location">
                                         <option value="">Select Location</option>
                                         <!-- Options will be loaded dynamically -->
                                     </select>
+                                    <div class="form-text" id="locationHelpText" style="display:none"></div>
                                     <div class="invalid-feedback"></div>
                                 </div>
 
@@ -1608,16 +1618,32 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                 $('#selectedRoleName').val(roleName);
                 dbg('Selected role', {roleId, roleName});
                 
-                // Show/hide location section for guards
-                if (roleId == 5) {
-                    dbg('Guard role selected; showing location section');
+                // Show/hide location section for Guard (5) and OIC (8) — both single-select
+                if (roleId == 5 || roleId == 8) {
+                    dbg('Role requires single location selection; showing location section');
                     $('#locationSection').show();
                     $('#guardLocation').prop('required', true);
+                    // Always use single-select
+                    $('#guardLocation').prop('multiple', false).removeAttr('size');
+                    // Reset selection
+                    $('#guardLocation').val('');
+                    if (roleId == 5) {
+                        $('#locationLabel').text('Guard Location');
+                        $('#locationHelpText').text('Select the guard\'s primary location').show();
+                        $('#guardLocation').attr('name','guard_location');
+                    } else {
+                        $('#locationLabel').text('OIC Assigned Location');
+                        $('#locationHelpText').text('Select the OIC\'s assigned location').show();
+                        $('#guardLocation').attr('name','oic_location');
+                    }
                     loadGuardLocations();
                 } else {
-                    dbg('Non-guard role selected; hiding location section');
+                    dbg('Role does not require location selection; hiding location section');
                     $('#locationSection').hide();
                     $('#guardLocation').prop('required', false);
+                    $('#guardLocation').prop('multiple', false).removeAttr('size');
+                    $('#guardLocation').attr('name','guard_location');
+                    $('#locationHelpText').hide();
                 }
             });
 
@@ -1785,20 +1811,20 @@ foreach ($desiredDeptIds as $rid) { if (isset($allRolesById[$rid])) { $deptRoles
                         { id: 'hireDate', name: 'Hire Date' }
                     ];
                     
-                    if ($('#selectedRole').val() == 5) {
-                        dbg('Guard role requires location field');
-                        requiredFields.push({ id: 'guardLocation', name: 'Guard Location' });
+                    if ($('#selectedRole').val() == 5 || $('#selectedRole').val() == 8) {
+                        dbg('Selected role requires location field');
+                        requiredFields.push({ id: 'guardLocation', name: ($('#selectedRole').val()== '8' ? 'Assigned Location' : 'Guard Location') });
                     }
                     
                     // Check required fields
                     for (let field of requiredFields) {
                         const $input = $(`#${field.id}`);
-                        const value = $input.val().trim();
+                        let value = ($input.val() ?? '').toString().trim();
                         dbg('Checking required field', field.id, 'value:', value);
                         
                         if (!value) {
                             $input.addClass('is-invalid');
-                            $input.next('.invalid-feedback').text(`${field.name} is required`);
+                            $input.nextAll('.invalid-feedback:first').text(`${field.name} is required`);
                             isValid = false;
                         } else {
                             $input.removeClass('is-invalid');

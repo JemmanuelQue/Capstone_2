@@ -432,9 +432,10 @@ function addEmployee() {
     }
         $birth_date = $_POST['birth_date'] ?? '';
         $hire_date = $_POST['hire_date'] ?? '';
-    $guard_location = $_POST['guard_location'] ?? '';
-    $sex = $_POST['sex'] ?? '';
-    $civil_status = $_POST['civil_status'] ?? '';
+        $guard_location = $_POST['guard_location'] ?? '';
+        $oic_location = $_POST['oic_location'] ?? '';
+        $sex = $_POST['sex'] ?? '';
+        $civil_status = $_POST['civil_status'] ?? '';
         $employee_id = $_POST['employee_id'] ?? '';
         
         // Government ID fields (required)
@@ -478,9 +479,13 @@ function addEmployee() {
         }
     if ($debugEnabled) { $debugStages[] = 'Email validated'; }
         
-        // Additional validation for guards
+        // Additional validation for guards / OIC
         if ($role_id == 5 && empty($guard_location)) {
             echo json_encode(['success' => false, 'message' => 'Guard location is required for security guards']);
+            return;
+        }
+        if ($role_id == 8 && empty($oic_location)) {
+            echo json_encode(['success' => false, 'message' => 'Assigned location is required for OIC']);
             return;
         }
     if ($debugEnabled) { $debugStages[] = 'Guard location validated/NA'; }
@@ -639,6 +644,14 @@ function addEmployee() {
                 $guardLocationStmt->execute([$new_user_id, $guard_location, $daily_rate, $lat, $lng]);
                 if ($debugEnabled) { $debugStages[] = 'Guard location inserted with coords'; }
             }
+
+            // If it's an OIC, assign selected location (single)
+            if ($role_id == 8 && !empty($oic_location)) {
+                if ($debugEnabled) { $debugStages[] = 'Inserting OIC assigned location'; }
+                $oicInsert = $conn->prepare("INSERT INTO oic_locations (oic_user_id, location_name, assigned_by, assigned_at, is_active) VALUES (?, ?, ?, NOW(), 1)");
+                $oicInsert->execute([$new_user_id, $oic_location, $_SESSION['user_id']]);
+                if ($debugEnabled) { $debugStages[] = 'OIC location inserted: ' . $oic_location; }
+            }
             
             // Insert government details (now required)
             $govtStmt = $conn->prepare("
@@ -711,6 +724,8 @@ function addEmployee() {
             $logDetails = "{$hrName} created new employee: {$first_name} {$last_name} (Role: {$role_name})";
             if ($role_id == 5) {
                 $logDetails .= " (Location: {$guard_location})";
+            } elseif ($role_id == 8 && !empty($oic_location)) {
+                $logDetails .= " (Assigned Location: {$oic_location})";
             }
             $logStmt->execute([$_SESSION['user_id'], $logDetails]);
             if ($debugEnabled) { $debugStages[] = 'Activity logged'; }
@@ -1106,7 +1121,8 @@ function generateEmployeeId() {
             '2' => 'ADMIN', 
             '3' => 'ACCTG',
             '4' => 'HR',
-            '5' => 'GUARD'
+            '5' => 'GUARD',
+            '8' => 'OIC'
         ];
         
         if (!isset($role_prefixes[$role_id])) {

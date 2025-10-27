@@ -71,13 +71,15 @@ function getEmployeeDetails() {
     if ($user_id === '') { echo '<div class="alert alert-danger">User ID is required</div>'; return; }
 
     try {
-        $stmt = $conn->prepare("SELECT u.*, r.Role_Name, gl.location_name as guard_location,
-                                       g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number
-                                FROM users u
-                                LEFT JOIN roles r ON u.Role_ID = r.Role_ID
-                                LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
-                                LEFT JOIN govt_details g ON u.User_ID = g.user_id
-                                WHERE u.User_ID = ? AND u.archived_at IS NULL");
+     $stmt = $conn->prepare("SELECT u.*, r.Role_Name,
+                        COALESCE(gl.location_name, ol.location_name) AS assigned_location,
+                        g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number
+                    FROM users u
+                    LEFT JOIN roles r ON u.Role_ID = r.Role_ID
+                    LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
+                    LEFT JOIN oic_locations ol ON u.User_ID = ol.oic_user_id AND ol.is_active = 1
+                    LEFT JOIN govt_details g ON u.User_ID = g.user_id
+                    WHERE u.User_ID = ? AND u.archived_at IS NULL");
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) { echo '<div class="alert alert-danger">Employee not found</div>'; return; }
@@ -131,8 +133,8 @@ function getEmployeeDetails() {
                     <tr><th>Hire Date:</th><td>" . ($user['hired_date'] ? date('M j, Y', strtotime($user['hired_date'])) : 'Not set') . "</td></tr>
                     <tr><th>Length of Service:</th><td>{$serviceLength}</td></tr>
                     <tr><th>Status:</th><td><span class='badge " . ($user['status'] === 'Active' ? 'bg-success' : 'bg-danger') . "'>" . htmlspecialchars($user['status']) . "</span></td></tr>";
-        if ((int)$user['Role_ID'] === 5 && !empty($user['guard_location'])) {
-            $html .= "<tr><th>Location:</th><td>" . htmlspecialchars($user['guard_location']) . "</td></tr>";
+        if (((int)$user['Role_ID'] === 5 || (int)$user['Role_ID'] === 8) && !empty($user['assigned_location'])) {
+            $html .= "<tr><th>Location:</th><td>" . htmlspecialchars($user['assigned_location']) . "</td></tr>";
         }
         $html .= "
                 </table>
@@ -171,20 +173,26 @@ function getEmployeeEditForm() {
     if ($user_id === '') { echo '<div class="alert alert-danger">User ID is required</div>'; return; }
 
     try {
-        $stmt = $conn->prepare("SELECT u.*, r.Role_Name, gl.location_name as guard_location,
-                                       g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number
-                                FROM users u
-                                LEFT JOIN roles r ON u.Role_ID = r.Role_ID
-                                LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
-                                LEFT JOIN govt_details g ON u.User_ID = g.user_id
-                                WHERE u.User_ID = ? AND u.archived_at IS NULL");
+     $stmt = $conn->prepare("SELECT u.*, r.Role_Name,
+                        COALESCE(gl.location_name, ol.location_name) AS assigned_location,
+                        g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number
+                    FROM users u
+                    LEFT JOIN roles r ON u.Role_ID = r.Role_ID
+                    LEFT JOIN guard_locations gl ON u.User_ID = gl.user_id AND gl.is_primary = 1
+                    LEFT JOIN oic_locations ol ON u.User_ID = ol.oic_user_id AND ol.is_active = 1
+                    LEFT JOIN govt_details g ON u.User_ID = g.user_id
+                    WHERE u.User_ID = ? AND u.archived_at IS NULL");
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) { echo '<div class="alert alert-danger">Employee not found</div>'; return; }
 
         $locations = [];
-        if ((int)$user['Role_ID'] === 5) {
-            $locationsStmt = $conn->prepare('SELECT DISTINCT location_name FROM guard_locations ORDER BY location_name');
+        if ((int)$user['Role_ID'] === 5 || (int)$user['Role_ID'] === 8) {
+            $locationsStmt = $conn->prepare("SELECT DISTINCT location_name FROM (
+                    SELECT location_name FROM guard_locations
+                    UNION
+                    SELECT location_name FROM oic_locations
+                ) AS locs ORDER BY location_name");
             $locationsStmt->execute();
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
         }
@@ -266,14 +274,14 @@ function getEmployeeEditForm() {
                     <label class='form-label'>Hire Date <span class='text-danger'>*</span></label>
                     <input type='date' class='form-control' name='hire_date' value='" . htmlspecialchars($user['hired_date'] ?? '') . "' required>
                 </div>";
-        if ((int)$user['Role_ID'] === 5) {
+        if ((int)$user['Role_ID'] === 5 || (int)$user['Role_ID'] === 8) {
             echo "
                 <div class='col-12'>
-                    <label class='form-label'>Guard Location <span class='text-danger'>*</span></label>
+                    <label class='form-label'>Assigned Location <span class='text-danger'>*</span></label>
                     <select class='form-select' name='guard_location' required>
                         <option value=''>Select Location</option>";
             foreach ($locations as $location) {
-                $selected = $location['location_name'] === $user['guard_location'] ? 'selected' : '';
+                $selected = $location['location_name'] === $user['assigned_location'] ? 'selected' : '';
                 echo "<option value='" . htmlspecialchars($location['location_name']) . "' {$selected}>" . htmlspecialchars($location['location_name']) . "</option>";
             }
             echo "
@@ -448,9 +456,9 @@ function addUser() {
             return;
         }
         
-        // Additional validation for guards
-        if ($role_id == 5 && empty($guard_location)) {
-            echo json_encode(['success' => false, 'message' => 'Guard location is required for security guards']);
+        // Additional validation for guards and OIC
+        if (($role_id == 5 || $role_id == 8) && empty($guard_location)) {
+            echo json_encode(['success' => false, 'message' => ($role_id == 5 ? 'Guard location is required for security guards' : 'Assigned location is required for OIC')]);
             return;
         }
         
@@ -602,6 +610,11 @@ function addUser() {
                 $guardLocationStmt = $conn->prepare("INSERT INTO guard_locations (user_id, location_name, daily_rate, is_primary, designated_latitude, designated_longitude, allowed_radius) VALUES (?, ?, ?, 1, ?, ?, 100)");
                 $guardLocationStmt->execute([$new_user_id, $guard_location, $daily_rate, $lat, $lng]);
             }
+            // If it's an OIC, add assignment to oic_locations (simple assignment)
+            if ($role_id == 8 && !empty($guard_location)) {
+                $oicAssignStmt = $conn->prepare("INSERT INTO oic_locations (oic_user_id, location_name, assigned_by, is_active, assigned_at, created_at, updated_at) VALUES (?, ?, ?, 1, NOW(), NOW(), NOW())");
+                $oicAssignStmt->execute([$new_user_id, $guard_location, $_SESSION['user_id']]);
+            }
             
             // Insert government details (now required)
             $govtStmt = $conn->prepare("
@@ -669,7 +682,7 @@ function addUser() {
             // Log the activity
             $logStmt = $conn->prepare("INSERT INTO activity_logs (User_ID, Activity_Type, Activity_Details) VALUES (?, 'User Creation', ?)");
             $logDetails = "{$superAdminName} created new user: {$first_name} {$last_name} (Role: {$role_name})";
-            if ($role_id == 5) {
+            if ($role_id == 5 || $role_id == 8) {
                 $logDetails .= " (Location: {$guard_location})";
             }
             $logStmt->execute([$_SESSION['user_id'], $logDetails]);
@@ -785,8 +798,8 @@ function editEmployee() {
         $updateQuery = 'UPDATE users SET ' . implode(', ', $updateFields) . ' WHERE User_ID = ?';
         $conn->prepare($updateQuery)->execute($updateValues);
 
-        // Guard location
-        if ((int)$currentUser['Role_ID'] === 5 && !empty($guard_location)) {
+    // Guard location
+    if ((int)$currentUser['Role_ID'] === 5 && !empty($guard_location)) {
             $locationStmt = $conn->prepare('SELECT daily_rate FROM guard_locations WHERE location_name = ? LIMIT 1');
             $locationStmt->execute([$guard_location]);
             $locationData = $locationStmt->fetch(PDO::FETCH_ASSOC);
@@ -815,7 +828,16 @@ function editEmployee() {
                 $conn->prepare('INSERT INTO guard_locations (user_id, location_name, daily_rate, is_primary, designated_latitude, designated_longitude, allowed_radius, created_at) VALUES (?, ?, ?, 1, ?, ?, 100, NOW())')
                      ->execute([$user_id, $guard_location, $daily_rate, $lat, $lng]);
             }
-        }
+       }
+       // OIC location (simple active assignment)
+       if ((int)$currentUser['Role_ID'] === 8 && !empty($guard_location)) {
+          // Deactivate any previous active assignments
+          $conn->prepare('UPDATE oic_locations SET is_active = 0, updated_at = NOW() WHERE oic_user_id = ? AND is_active = 1')
+              ->execute([$user_id]);
+          // Insert new active assignment
+          $conn->prepare('INSERT INTO oic_locations (oic_user_id, location_name, assigned_by, is_active, assigned_at, created_at, updated_at) VALUES (?, ?, ?, 1, NOW(), NOW(), NOW())')
+              ->execute([$user_id, $guard_location, $_SESSION['user_id']]);
+       }
 
         // Govt details
         $sss_number = unformatGovtId($_POST['sss_number'] ?? '');

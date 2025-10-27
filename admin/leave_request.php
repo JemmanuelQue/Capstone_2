@@ -95,26 +95,35 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
             word-wrap: break-word;
         }
         
+        /* New column 5: Proof */
         #leaveRequestsTable th:nth-child(5),
         #leaveRequestsTable td:nth-child(5) {
-            min-width: 200px; /* Period */
+            min-width: 120px; /* Proof */
             white-space: nowrap;
+            text-align: center;
         }
         
         #leaveRequestsTable th:nth-child(6),
         #leaveRequestsTable td:nth-child(6) {
-            min-width: 120px; /* Request Date */
+            min-width: 200px; /* Period */
             white-space: nowrap;
         }
         
         #leaveRequestsTable th:nth-child(7),
         #leaveRequestsTable td:nth-child(7) {
-            min-width: 100px; /* Status */
+            min-width: 120px; /* Request Date */
             white-space: nowrap;
         }
         
         #leaveRequestsTable th:nth-child(8),
         #leaveRequestsTable td:nth-child(8) {
+            min-width: 120px; /* Status */
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        #leaveRequestsTable th:nth-child(9),
+        #leaveRequestsTable td:nth-child(9) {
             min-width: 250px; /* Rejection Reason */
             max-width: 350px;
             white-space: normal;
@@ -396,6 +405,7 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">location_on</i>LOCATION</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">category</i>TYPE</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">description</i>REASON</th>
+                        <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">attach_file</i>PROOF</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">date_range</i>PERIOD</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">schedule</i>REQUEST DATE</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">info</i>STATUS</th>
@@ -466,6 +476,21 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                                     <?php echo htmlspecialchars($request['Leave_Reason']); ?>
                                 </div>
                             </td>
+                            <td class="text-center">
+                                <?php 
+                                $proofPath = isset($request['proof']) ? trim($request['proof']) : '';
+                                if (!empty($proofPath)) {
+                                    $href = '../' . ltrim($proofPath, '/');
+                                    ?>
+                                    <button type="button" 
+                                            class="btn btn-outline-primary btn-sm view-proof" 
+                                            data-proof-url="<?php echo htmlspecialchars($href); ?>">
+                                        View
+                                    </button>
+                                <?php } else { ?>
+                                    <span class="text-muted">-</span>
+                                <?php } ?>
+                            </td>
                             <td class="period-cell" style="min-width: 200px;">
                                 <div>
                                     <div class="fw-semibold text-primary mb-1">
@@ -514,6 +539,25 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
     
 
     
+
+    <!-- Proof Viewer Modal -->
+    <div class="modal fade" id="proofModal" tabindex="-1" aria-labelledby="proofModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="proofModalLabel">Proof</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" id="proofContent" style="min-height: 70vh; display:flex; align-items:center; justify-content:center; background:#f8f9fa;">
+                    <div class="text-muted p-4">Loading...</div>
+                </div>
+                <div class="modal-footer">
+                    <a id="openInNewTab" href="#" target="_blank" class="btn btn-outline-secondary">Open in new tab</a>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- SWAL Alerts for leave requests only (profile picture alerts removed) -->
     <script>
@@ -690,13 +734,13 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
     <script>
 $(document).ready(function() {
     // Initialize DataTable with pagination and disable default search box (we use Guard Name field)
-    if ($('#leaveRequestsTable').length) {
+            if ($('#leaveRequestsTable').length) {
         var table = $('#leaveRequestsTable').DataTable({
             pageLength: 10,
             lengthMenu: [10, 25, 50, 100],
-            order: [[5, 'desc']], // Request Date column
+                    order: [[6, 'desc']], // Request Date column (index updated after adding Proof)
             columnDefs: [
-                { orderable: false, targets: [2, 3] } // Type, Reason
+                { orderable: false, targets: [2, 3, 4, 8] } // Type, Reason, Proof, Rejection Reason
             ],
             dom: 'lrtip' // hide built-in search box
         });
@@ -720,6 +764,36 @@ $(document).ready(function() {
 
     // Actions removed (accept/reject)
 });
+</script>
+
+<!-- Proof Viewer Script -->
+<script>
+    $(document).on('click', '.view-proof', function(e) {
+        e.stopPropagation();
+        const url = $(this).data('proof-url');
+        const $content = $('#proofContent');
+        const $openLink = $('#openInNewTab');
+
+        $openLink.attr('href', url);
+        $content.html('<div class="text-muted p-4">Loading...</div>');
+
+        const lower = String(url).toLowerCase();
+        const isImage = /(\.jpg|\.jpeg|\.png|\.gif|\.webp|\.bmp)$/i.test(lower);
+        const isPdf = /(\.pdf)$/i.test(lower);
+
+        let node = '';
+        if (isImage) {
+            node = '<img src="' + url + '" alt="Proof" style="max-width:100%; max-height:80vh; object-fit:contain; display:block; margin:0 auto;">';
+        } else if (isPdf) {
+            node = '<iframe src="' + url + '#view=FitH" title="Proof" style="width:100%; height:80vh; border:0; background:#fff;"></iframe>';
+        } else {
+            node = '<div class="p-4 text-center">This file type is not previewable here. You can <a href="' + url + '" target="_blank">open it in a new tab</a>.</div>';
+        }
+
+        $content.html(node);
+        const modal = new bootstrap.Modal(document.getElementById('proofModal'));
+        modal.show();
+    });
 </script>
 </body>
 </html>

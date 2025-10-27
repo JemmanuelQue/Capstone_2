@@ -1,11 +1,9 @@
 <?php
-session_start();
 require_once __DIR__ . '/../includes/session_check.php';
-require_once '../db_connection.php';
 // Enforce HR role (3)
-if (!validateSession($conn, 3)) { exit; }
+validateSession($conn, 3);
 
-// Get current hr user's name
+// Get current HR user's name
 $hrStmt = $conn->prepare("SELECT First_Name, Last_Name FROM users WHERE Role_ID = 3 AND status = 'Active' AND User_ID = ?");
 $hrStmt->execute([$_SESSION['user_id']]);
 $hrData = $hrStmt->fetch(PDO::FETCH_ASSOC);
@@ -54,7 +52,130 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
+    
+    <!-- Custom styles for horizontal scrolling -->
+    <style>
+        /* Force horizontal scrolling on all screen sizes */
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+        
+        /* Ensure table maintains minimum width for proper column spacing */
+        #leaveRequestsTable {
+            min-width: 1400px;
+            width: 100%;
+            table-layout: auto;
+        }
+        
+        /* Set specific column widths for better layout */
+        #leaveRequestsTable th:nth-child(1),
+        #leaveRequestsTable td:nth-child(1) {
+            min-width: 180px; /* Guard Name */
+            white-space: nowrap;
+        }
+        
+        #leaveRequestsTable th:nth-child(2),
+        #leaveRequestsTable td:nth-child(2) {
+            min-width: 120px; /* Location */
+            white-space: nowrap;
+        }
+        
+        #leaveRequestsTable th:nth-child(3),
+        #leaveRequestsTable td:nth-child(3) {
+            min-width: 100px; /* Type */
+            white-space: nowrap;
+        }
+        
+        #leaveRequestsTable th:nth-child(4),
+        #leaveRequestsTable td:nth-child(4) {
+            min-width: 250px; /* Reason */
+            max-width: 350px;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        
+        /* New column 5: Proof */
+        #leaveRequestsTable th:nth-child(5),
+        #leaveRequestsTable td:nth-child(5) {
+            min-width: 120px; /* Proof */
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        #leaveRequestsTable th:nth-child(6),
+        #leaveRequestsTable td:nth-child(6) {
+            min-width: 200px; /* Period */
+            white-space: nowrap;
+        }
+        
+        #leaveRequestsTable th:nth-child(7),
+        #leaveRequestsTable td:nth-child(7) {
+            min-width: 120px; /* Request Date */
+            white-space: nowrap;
+        }
+        
+        #leaveRequestsTable th:nth-child(8),
+        #leaveRequestsTable td:nth-child(8) {
+            min-width: 250px; /* Rejection Reason */
+            max-width: 350px;
+            white-space: normal;
+            word-wrap: break-word;
+            text-align: left;
+        }
+        
+        #leaveRequestsTable th:nth-child(9),
+        #leaveRequestsTable td:nth-child(9) {
+            min-width: 120px; /* Status (last column) */
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        /* Custom scrollbar for better UX */
+        .table-responsive::-webkit-scrollbar {
+            height: 12px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin: 0 10px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #6c757d;
+            border-radius: 6px;
+            border: 2px solid #f8f9fa;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #495057;
+        }
+        
+        /* Add subtle shadow to indicate scrollable content */
+        .table-responsive {
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+            border-radius: 0.375rem;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #leaveRequestsTable {
+                min-width: 1200px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            #leaveRequestsTable {
+                min-width: 1000px;
+            }
+            
+            .table-responsive::-webkit-scrollbar {
+                height: 8px;
+            }
+        }
+    </style>
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
@@ -96,9 +217,6 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                 </a>
             </li>
             <li class="nav-item">
-                
-            </li>
-            <li class="nav-item">
                 <a href="archives.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Archives">
                     <span class="material-icons">archive</span>
                     <span>Archives</span>
@@ -138,8 +256,8 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
     
     <!-- Filter Section -->
     <div class="card mb-3 shadow-sm">
-        <div class="card-body">
-            <form id="filterForm" method="GET" class="d-flex justify-content-center">
+        <div class="card-body d-flex justify-content-center">
+            <form id="filterForm" method="GET">
                 <div class="row g-2">
                     <div class="col-6 col-md-2">
                         <label for="start_date" class="form-label">Start Date</label>
@@ -171,13 +289,13 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                         </select>
                     </div>
                      <div class="col-6 col-md-2">
-                        <label for="guard_name" class="form-label text-nowrap">Search Guard</label>
+                        <label for="guard_name" class="form-label">Search Guard</label>
                         <input type="text" class="form-control" id="guard_name" name="guard_name" placeholder="Enter name..."
                                value="<?php echo isset($_GET['guard_name']) ? htmlspecialchars($_GET['guard_name']) : ''; ?>">
                     </div>        
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-12 col-md-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2 d-flex align-items-center">
-                            <i class="material-icons me-1">search</i> Filter
+                            <i class="material-icons me-1">search</i> Apply Filter
                         </button>
                         <a href="leave_request.php" class="btn btn-outline-secondary d-flex align-items-center">
                             <i class="material-icons me-1">clear</i> Clear
@@ -269,7 +387,7 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
             if (count($leaveRequests) == 0) {
                 echo '<div class="alert alert-info">
                     <i class="material-icons align-middle me-2">info</i>
-                    No leave requests found for this month.
+                    No leave requests found.
                 </div>';
             } else {
             ?>
@@ -281,10 +399,12 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">location_on</i>LOCATION</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">category</i>TYPE</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">description</i>REASON</th>
+                        <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">attach_file</i>PROOF</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">date_range</i>PERIOD</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">schedule</i>REQUEST DATE</th>
                         <th class="fw-bold"><i class="material-icons align-middle me-1" style="font-size: 18px;">comment</i>REJECTION REASON</th>
                         <th class="fw-bold text-center"><i class="material-icons align-middle me-1" style="font-size: 18px;">info</i>STATUS</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
@@ -349,6 +469,21 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                                 <div class="text-wrap" style="word-break: break-word; line-height: 1.4;">
                                     <?php echo htmlspecialchars($request['Leave_Reason']); ?>
                                 </div>
+                            </td>
+                            <td class="text-center">
+                                <?php 
+                                $proofPath = isset($request['proof']) ? trim($request['proof']) : '';
+                                if (!empty($proofPath)) {
+                                    $href = '../' . ltrim($proofPath, '/');
+                                    ?>
+                                    <button type="button" 
+                                            class="btn btn-outline-primary btn-sm view-proof" 
+                                            data-proof-url="<?php echo htmlspecialchars($href); ?>">
+                                        View
+                                    </button>
+                                <?php } else { ?>
+                                    <span class="text-muted">-</span>
+                                <?php } ?>
                             </td>
                             <td class="period-cell" style="min-width: 200px;">
                                 <div>
@@ -424,6 +559,7 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
+                            
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -432,6 +568,27 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
         <?php } ?>
 
     
+
+    
+
+    <!-- Proof Viewer Modal -->
+    <div class="modal fade" id="proofModal" tabindex="-1" aria-labelledby="proofModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="proofModalLabel">Proof</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" id="proofContent" style="min-height: 70vh; display:flex; align-items:center; justify-content:center; background:#f8f9fa;">
+                    <div class="text-muted p-4">Loading...</div>
+                </div>
+                <div class="modal-footer">
+                    <a id="openInNewTab" href="#" target="_blank" class="btn btn-outline-secondary">Open in new tab</a>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Reject Leave Request Modal -->
     <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
@@ -478,7 +635,7 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
         <input type="hidden" name="location" id="accept_location">
     </form>
 
-    <!-- SWAL Alerts for Profile Picture -->
+    <!-- SWAL Alerts for leave requests only (profile picture alerts removed) -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Leave request success/error messages
@@ -503,6 +660,8 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
             <?php endif; ?>
         });
     </script>
+
+    
 
     <!-- Bootstrap and jQuery JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -608,17 +767,16 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
             </a>
             <a href="leave_request.php" class="mobile-nav-item active">
                 <span class="material-icons">event_note</span>
-                <span class="mobile-nav-text">Leave Request</span>
+                <span class="mobile-nav-text">Leave Requests</span>
             </a>
             <a href="recruitment.php" class="mobile-nav-item">
-            <span class="material-icons">person_add</span>
-            <span class="mobile-nav-text">Recruitment</span>
+                <span class="material-icons">person_add</span>
+                <span class="mobile-nav-text">Recruitment</span>
             </a>
             <a href="masterlist.php" class="mobile-nav-item">
-                <span class="material-icons">assignment</span>
+                <span class="material-icons">list</span>
                 <span class="mobile-nav-text">Masterlist</span>
             </a>
-            
             <a href="archives.php" class="mobile-nav-item">
                 <span class="material-icons">archive</span>
                 <span class="mobile-nav-text">Archives</span>
@@ -647,34 +805,15 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
     <script>
 $(document).ready(function() {
     // Initialize DataTable with pagination and disable default search box (we use Guard Name field)
-    if ($('#leaveRequestsTable').length) {
+            if ($('#leaveRequestsTable').length) {
         var table = $('#leaveRequestsTable').DataTable({
             pageLength: 10,
             lengthMenu: [10, 25, 50, 100],
-            order: [[5, 'desc']], // Request Date column (index unchanged)
+                    order: [[6, 'desc']], // Request Date column (index updated after adding Proof)
             columnDefs: [
-                { orderable: false, targets: [2, 3, 7] }, // Type, Reason, Status/Actions (last column)
-                { className: 'text-center', targets: [7] } // Center last column
+                { orderable: false, targets: [2, 3, 4, 8] } // Type, Reason, Proof, Rejection Reason
             ],
-            dom: 'lrtip', // hide built-in search box
-            // Turn on DataTables' horizontal scrolling so a native scrollbar appears
-            scrollX: true,
-            scrollCollapse: true,
-            responsive: false, // keep layout stable
-            autoWidth: false, // we'll control widths via CSS
-            fixedColumns: false,
-            initComplete: function() {
-                // Adjust columns after initialization to ensure header/body alignment
-                const api = this.api();
-                api.columns.adjust();
-                // A small delayed adjust helps after fonts/images load
-                setTimeout(function(){ api.columns.adjust(); }, 150);
-            }
-        });
-
-        // Re-adjust on window resize to keep header/body aligned
-        $(window).on('resize.leaves.dt', function(){
-            table.columns.adjust();
+            dom: 'lrtip' // hide built-in search box
         });
 
         // Bind Guard Name input to column 0 search
@@ -744,6 +883,36 @@ $(document).ready(function() {
         });
     });
 });
+</script>
+
+<!-- Proof Viewer Script -->
+<script>
+    $(document).on('click', '.view-proof', function(e) {
+        e.stopPropagation();
+        const url = $(this).data('proof-url');
+        const $content = $('#proofContent');
+        const $openLink = $('#openInNewTab');
+
+        $openLink.attr('href', url);
+        $content.html('<div class="text-muted p-4">Loading...</div>');
+
+        const lower = String(url).toLowerCase();
+        const isImage = /(\.jpg|\.jpeg|\.png|\.gif|\.webp|\.bmp)$/i.test(lower);
+        const isPdf = /(\.pdf)$/i.test(lower);
+
+        let node = '';
+        if (isImage) {
+            node = '<img src="' + url + '" alt="Proof" style="max-width:100%; max-height:80vh; object-fit:contain; display:block; margin:0 auto;">';
+        } else if (isPdf) {
+            node = '<iframe src="' + url + '#view=FitH" title="Proof" style="width:100%; height:80vh; border:0; background:#fff;"></iframe>';
+        } else {
+            node = '<div class="p-4 text-center">This file type is not previewable here. You can <a href="' + url + '" target="_blank">open it in a new tab</a>.</div>';
+        }
+
+        $content.html(node);
+        const modal = new bootstrap.Modal(document.getElementById('proofModal'));
+        modal.show();
+    });
 </script>
 </body>
 </html>
