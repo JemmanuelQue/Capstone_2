@@ -8,17 +8,10 @@ if (!validateSession($conn, 8)) { exit; }
 
 $currentDate = date('Y-m-d');
 
-// Handle filter form submission
-if (isset($_GET['filter_submit'])) {
-    $employmentStatus = $_GET['employment_status'] ?? 'all';
-    $evaluationStatus = $_GET['evaluation_status'] ?? 'all';
-    $searchTerm = isset($_GET['guardSearch']) ? trim($_GET['guardSearch']) : '';
-} else {
-    // Default values - show all guards by default
-    $employmentStatus = 'all';
-    $evaluationStatus = 'all';
-    $searchTerm = '';
-}
+// Handle filter form (always honor GET params so filters persist)
+$employmentStatus = $_GET['employment_status'] ?? 'all';
+$evaluationStatus = $_GET['evaluation_status'] ?? 'all';
+$searchTerm = isset($_GET['guardSearch']) ? trim($_GET['guardSearch']) : '';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 // Save current page as last visited (except profile)
@@ -137,9 +130,21 @@ $searchCondition = '';
 $params = [];
 
 if (!empty($searchTerm)) {
-    $searchCondition = " AND (u.First_Name LIKE ? OR u.Last_Name LIKE ? OR CONCAT(u.First_Name, ' ', u.Last_Name) LIKE ?) ";
-    $searchParam = "%$searchTerm%";
-    $params = array_merge($params, [$searchParam, $searchParam, $searchParam]);
+    // Normalize whitespace in search term
+    $normalizedTerm = preg_replace('/\s+/', ' ', $searchTerm);
+    $like = "%$normalizedTerm%";
+    // Match first, last, middle, employee_id and common full-name variants (handle NULLs with CONCAT_WS)
+    $searchCondition = " AND (
+        u.First_Name LIKE ?
+        OR u.Last_Name LIKE ?
+        OR u.middle_name LIKE ?
+        OR u.employee_id LIKE ?
+        OR CONCAT_WS(' ', u.First_Name, u.Last_Name) LIKE ?
+        OR CONCAT_WS(' ', u.First_Name, u.middle_name, u.Last_Name) LIKE ?
+        OR CONCAT_WS(' ', u.Last_Name, u.First_Name) LIKE ?
+        OR CONCAT(u.Last_Name, ', ', u.First_Name) LIKE ?
+    ) ";
+    $params = array_merge($params, [$like, $like, $like, $like, $like, $like, $like, $like]);
 }
 
 // Build location condition for OIC's assigned locations

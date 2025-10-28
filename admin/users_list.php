@@ -221,7 +221,7 @@ function checkGovtIdCompleteness($user) {
                     </div>
                 </div>
 
-                <!-- Users by Role -->
+                 <!-- Users by Role -->
                 <div class="accordion" id="usersAccordion">
                     <!-- Super Admin Section -->
                     <div class="accordion-item">
@@ -234,13 +234,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -270,7 +263,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -300,13 +293,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -336,7 +322,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -366,13 +352,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -402,7 +381,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -432,13 +411,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -468,7 +440,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -501,13 +473,6 @@ function checkGovtIdCompleteness($user) {
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -537,7 +502,7 @@ function checkGovtIdCompleteness($user) {
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
@@ -555,9 +520,6 @@ function checkGovtIdCompleteness($user) {
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
                     <!-- OIC Section -->
                     <div class="accordion-item">
@@ -570,13 +532,6 @@ function checkGovtIdCompleteness($user) {
                             <div class="accordion-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover users-table">
-                                        <colgroup class="users-colgroup">
-                                            <col style="width:12%">
-                                            <col style="width:34%">
-                                            <col style="width:24%">
-                                            <col style="width:10%">
-                                            <col style="width:20%">
-                                        </colgroup>
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Profile</th>
@@ -592,28 +547,28 @@ function checkGovtIdCompleteness($user) {
                                             $oicStmt = $conn->prepare("SELECT u.*, g.sss_number, g.tin_number, g.philhealth_number, g.pagibig_number FROM users u LEFT JOIN govt_details g ON u.User_ID = g.user_id WHERE u.Role_ID = 8 AND u.archived_at IS NULL ORDER BY u.Last_Name");
                                             $oicStmt->execute();
                                             $oicUsers = $oicStmt->fetchAll(PDO::FETCH_ASSOC);
-                                            
+
                                             foreach ($oicUsers as $user) {
-                                                $profilePic = (!empty($user['Profile_Pic']) && file_exists($user['Profile_Pic'])) 
-                                                    ? $user['Profile_Pic'] 
+                                                $profilePic = (!empty($user['Profile_Pic']) && file_exists($user['Profile_Pic']))
+                                                    ? $user['Profile_Pic']
                                                     : '../images/default_profile.png';
-                                                
+
                                                 $statusClass = ($user['status'] === 'Active') ? 'bg-success' : 'bg-danger';
                                                 $govtIdStatus = checkGovtIdCompleteness($user);
-                                                
+
                                                 echo '<tr class="user-row" data-role="'.$user['Role_ID'].'" data-user-id="'.$user['User_ID'].'" data-emp-id="'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'" data-status="'.htmlspecialchars(strtolower($user['status'] ?? ''), ENT_QUOTES).'">';
                                                 echo '<td><img src="'.$profilePic.'" class="rounded-circle" width="40" height="40"></td>';
                                                 echo '<td>'.$user['First_Name'].' '.$user['Last_Name'].'</td>';
                                                 echo '<td>'.htmlspecialchars($user['employee_id'] ?? '', ENT_QUOTES).'</td>';
                                                 echo '<td><span class="badge '.$statusClass.'">'.$user['status'].'</span> '.$govtIdStatus.'</td>';
-                                                echo '<td>';
+                                                echo '<td class="actions-cell">';
                                                 echo '<button class="btn btn-sm btn-primary view-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">visibility</i></button> ';
                                                 echo '<button class="btn btn-sm btn-info edit-user-btn me-1" data-user-id="'.$user['User_ID'].'"><i class="material-icons">edit</i></button> ';
                                                 echo '<button class="btn btn-sm btn-warning archive-user-btn" data-user-id="'.$user['User_ID'].'" data-name="'.htmlspecialchars($user['First_Name'].' '.$user['Last_Name'], ENT_QUOTES).'"><i class="material-icons">archive</i></button>';
                                                 echo '</td>';
                                                 echo '</tr>';
                                             }
-                                            
+
                                             if (count($oicUsers) === 0) {
                                                 echo '<tr><td colspan="5" class="text-center">No OIC users found</td></tr>';
                                             }
@@ -624,6 +579,9 @@ function checkGovtIdCompleteness($user) {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Add User Modal -->
         <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">

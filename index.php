@@ -19,6 +19,9 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['role_id'])) {
         case 5: // Security Guard
             header("Location: guards/guards_dashboard.php");
             exit();
+        case 8: // OIC
+            header("Location: oic/dashboard.php");
+            exit();
     }
 }
 ?>
@@ -316,7 +319,18 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['role_id'])) {
                             <a href="logout.php" class="btn btn-outline-danger px-4 py-2 rounded-pill me-2">Logout</a>
                         </li>
                         <li class="nav-item mt-2 mt-lg-0">
-                            <span class="btn btn-info px-4 py-2 rounded-pill">Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></span>
+                            <span class="btn btn-green px-4 py-2 rounded-pill">Welcome, <?php 
+                                $displayName = 'User';
+                                if (isset($_SESSION['first_name']) || isset($_SESSION['last_name'])) {
+                                    $fn = trim($_SESSION['first_name'] ?? '');
+                                    $ln = trim($_SESSION['last_name'] ?? '');
+                                    $name = trim(($fn . ' ' . $ln));
+                                    if ($name !== '') { $displayName = $name; }
+                                } elseif (isset($_SESSION['username'])) {
+                                    $displayName = $_SESSION['username'];
+                                }
+                                echo htmlspecialchars($displayName);
+                            ?></span>
                         </li>
                     <?php endif; ?>
                 </ul>

@@ -6,18 +6,11 @@ require_once '../db_connection.php'; // $conn = PDO
 
 $currentDate = date('Y-m-d');
 
-// Filters
-if (isset($_GET['filter_submit'])) {
-    $employmentStatus = $_GET['employment_status'] ?? 'all';
-    $evaluationStatus = $_GET['evaluation_status'] ?? 'all';
-    $searchTerm = isset($_GET['guardSearch']) ? trim($_GET['guardSearch']) : '';
-    $locationFilter = isset($_GET['location']) ? trim($_GET['location']) : '';
-} else {
-    $employmentStatus = 'all';
-    $evaluationStatus = 'all';
-    $searchTerm = '';
-    $locationFilter = '';
-}
+// Filters (always honor GET params so filters persist on reload/bookmarks)
+$employmentStatus = $_GET['employment_status'] ?? 'all';
+$evaluationStatus = $_GET['evaluation_status'] ?? 'all';
+$searchTerm = isset($_GET['guardSearch']) ? trim($_GET['guardSearch']) : '';
+$locationFilter = isset($_GET['location']) ? trim($_GET['location']) : '';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 // Save current page as last visited (except profile)
@@ -85,9 +78,20 @@ $params = [];
 $searchCondition = '';
 $locationCondition = '';
 if ($searchTerm !== '') {
-    $searchCondition = " AND (u.First_Name LIKE ? OR u.Last_Name LIKE ? OR CONCAT(u.First_Name, ' ', u.Last_Name) LIKE ?) ";
-    $like = "%$searchTerm%";
-    $params = array_merge($params, [$like, $like, $like]);
+    // Normalize spaces for reliable matching
+    $normalized = preg_replace('/\s+/', ' ', $searchTerm);
+    $like = "%$normalized%";
+    $searchCondition = " AND (
+        u.First_Name LIKE ?
+        OR u.Last_Name LIKE ?
+        OR u.middle_name LIKE ?
+        OR u.employee_id LIKE ?
+        OR CONCAT_WS(' ', u.First_Name, u.Last_Name) LIKE ?
+        OR CONCAT_WS(' ', u.First_Name, u.middle_name, u.Last_Name) LIKE ?
+        OR CONCAT_WS(' ', u.Last_Name, u.First_Name) LIKE ?
+        OR CONCAT(u.Last_Name, ', ', u.First_Name) LIKE ?
+    ) ";
+    $params = array_merge($params, [$like, $like, $like, $like, $like, $like, $like, $like]);
 }
 if ($locationFilter !== '') {
     $locationCondition = " AND gl.location_name = ? ";
