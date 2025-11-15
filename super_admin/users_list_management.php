@@ -653,13 +653,13 @@ function addUser() {
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
-            $mail->Username = 'phpmailer572@gmail.com';
-            $mail->Password = 'hbwulibpahbbsuhu';
+            $mail->Username = 'phpmailer80@gmail.com';
+            $mail->Password = 'gtwk kitl whxz moqy';
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
             
             // Set email content
-            $mail->setFrom('phpmailer572@gmail.com', 'Green Meadows Security');
+            $mail->setFrom('phpmailer80@gmail.com', 'Green Meadows Security');
             $mail->addAddress($email);
             $mail->isHTML(true);
             $mail->Subject = 'Welcome to Green Meadows Security Agency';
