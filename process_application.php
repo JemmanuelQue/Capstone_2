@@ -66,24 +66,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $checkEmail = $conn->prepare("SELECT COUNT(*) FROM applicants WHERE Email = ?");
         $checkEmail->execute([$email]);
         if ($checkEmail->fetchColumn() > 0) {
-            // Email already exists
-            header("Location: index.php?section=careers&status=duplicate_email#apply");
-            exit;
+            // Email already exists - could be from old application, delete it and allow reapplication
+            $deleteOld = $conn->prepare("DELETE FROM applicants WHERE Email = ?");
+            $deleteOld->execute([$email]);
         }
         
         // Check for duplicate phone number
         $checkPhone = $conn->prepare("SELECT COUNT(*) FROM applicants WHERE Phone_Number = ?");
         $checkPhone->execute([$phone]);
         if ($checkPhone->fetchColumn() > 0) {
-            // Phone already exists
-            header("Location: index.php?section=careers&status=duplicate_phone#apply");
-            exit;
+            // Phone already exists - could be from old application, delete it and allow reapplication
+            $deleteOld = $conn->prepare("DELETE FROM applicants WHERE Phone_Number = ?");
+            $deleteOld->execute([$phone]);
         }
         
-        // Only proceed with insertion if no duplicates found
+        // Insert new application with Status column
         $stmt = $conn->prepare("INSERT INTO applicants (First_Name, Middle_Name, Last_Name, Name_Extension, Email, Phone_Number, 
-                        Position, Preferred_Location, Resume_Path, Additional_Info) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        Position, Preferred_Location, Resume_Path, Additional_Info, Status) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'New')");
 
         $stmt->execute([$firstName, $middleName, $lastName, $nameExtension, $email, $phone, $position, 
                     $preferredLocation, $resumePath, $message]);
@@ -93,11 +93,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
         
     } catch (PDOException $e) {
-        // Log error
+        // Log detailed error
         error_log("Application submission error: " . $e->getMessage());
+        error_log("SQL State: " . $e->getCode());
+        error_log("Error Info: " . print_r($e->errorInfo, true));
         
         // Redirect with error message
-        header("Location: index.php?section=careers&status=error#apply");
+        header("Location: index.php?section=careers&status=error&msg=" . urlencode($e->getMessage()) . "#apply");
         exit;
     }
 } else {
