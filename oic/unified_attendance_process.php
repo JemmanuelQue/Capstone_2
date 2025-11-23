@@ -436,6 +436,10 @@ try {
             $oicName = ($oicData['First_Name'] ?? 'OIC') . ' ' . ($oicData['Last_Name'] ?? '');
 
             $file = $_FILES['excelFile']['tmp_name'];
+            // Expose tmp upload path for debugging (only when debug=1)
+            if ($DEBUG_MODE) {
+                header('X-Upload-Tmp-Path: ' . $file);
+            }
             try {
                 $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
             } catch (Exception $e) {
@@ -455,7 +459,7 @@ try {
                 'expectedHeaders' => $expectedHeaders,
                 'actualHeaders' => $actualHeaders,
                 'rowErrors' => [],
-                'context' => [ 'oicUserId' => $_SESSION['user_id'] ?? null, 'guardId' => (isset($_POST['guardId']) && ctype_digit($_POST['guardId'])) ? (int)$_POST['guardId'] : null ]
+                'context' => [ 'oicUserId' => $_SESSION['user_id'] ?? null, 'guardId' => (isset($_POST['guardId']) && ctype_digit($_POST['guardId'])) ? (int)$_POST['guardId'] : null, 'tmpFile' => $DEBUG_MODE ? $file : null ]
             ];
             if ($actualHeaders !== $expectedHeaders) {
                 $debug['code'] = 'header_mismatch';
