@@ -28,15 +28,41 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
 
 // Get date parameters
 $month = isset($_GET['month']) ? $_GET['month'] : date('Y-m');
-$dateRange = isset($_GET['dateRange']) ? $_GET['dateRange'] : '1-15'; // Default to first half of month
+$dateRange = isset($_GET['dateRange']) ? $_GET['dateRange'] : '1-15';
 
-// Calculate date range based on parameters
+// Determine actual last day of the selected month
+$lastDayOfMonth = date('t', strtotime($month . '-01'));
+
+// Normalize legacy selections (e.g. 16-31 on a 30-day month, or 1-31 on February)
+if (preg_match('/^1-3[01]$/', $dateRange) || preg_match('/^1-2[89]$/', $dateRange) || preg_match('/^1-30$/', $dateRange)) {
+    $dateRange = '1-' . $lastDayOfMonth; // Full month normalized
+} elseif (preg_match('/^16-3[01]$/', $dateRange) || preg_match('/^16-2[89]$/', $dateRange) || preg_match('/^16-30$/', $dateRange)) {
+    $dateRange = '16-' . $lastDayOfMonth; // Second half normalized
+}
+
+// Calculate date range based on normalized parameters
 if ($dateRange === '1-15') {
     $startDate = "$month-01";
     $endDate = "$month-15";
-} else {
+} elseif ($dateRange === '16-' . $lastDayOfMonth) {
     $startDate = "$month-16";
-    $endDate = date('Y-m-t', strtotime($month)); // Last day of month
+    $endDate = date('Y-m-t', strtotime($month));
+} elseif ($dateRange === '1-' . $lastDayOfMonth) {
+    $startDate = "$month-01";
+    $endDate = date('Y-m-t', strtotime($month));
+} elseif (preg_match('/^(\d{1,2})-(\d{1,2})$/', $dateRange, $m)) {
+    // Generic custom pattern fallback
+    $dStart = (int)$m[1];
+    $dEnd = (int)$m[2];
+    if ($dStart < 1) $dStart = 1;
+    if ($dEnd > (int)$lastDayOfMonth) $dEnd = (int)$lastDayOfMonth;
+    $startDate = sprintf('%s-%02d', $month, $dStart);
+    $endDate = sprintf('%s-%02d', $month, $dEnd);
+} else {
+    // Safety fallback
+    $dateRange = '1-15';
+    $startDate = "$month-01";
+    $endDate = "$month-15";
 }
 
 // For debugging
@@ -45,12 +71,42 @@ if (empty($startDate) || empty($dateRange)) {
     $endDate = date('Y-m-15');   // Default to 15th day of current month
     $dateRange = '1-15';         // Default range
 }
+
+//if ($dateRange === '1-' . $lastDayOfMonth) {
+        // Aggregate two halves
+        //$firstStart = $month . '-01';
+        //$firstEnd = $month . '-15';
+        //$secondStart = $month . '-16';
+       // $secondEnd = date('Y-m-t', strtotime($month));
+        //$firstHalf = $calculator->calculatePayrollForGuard($userId, null, null, $firstStart, $firstEnd);
+       // $secondHalf = $calculator->calculatePayrollForGuard($userId, null, null, $secondStart, $secondEnd);
+       // $payroll = $firstHalf;
+       // foreach ($secondHalf as $key => $value) {
+          //  if (is_numeric($value) && !in_array($key, ['hourly_rate','daily_rate'])) {
+           //     if (!isset($payroll[$key])) { $payroll[$key] = 0; }
+           //     $payroll[$key] += $value;
+          //  }
+        //}
+       // $payroll['gross_pay'] = 
+       //     $payroll['regular_hours_pay'] + 
+       //     $payroll['ot_pay'] + 
+      //      $payroll['legal_holiday_pay'] +
+      //      $payroll['holiday_ot_pay'] + 
+       //     $payroll['special_holiday_pay'] + 
+       //     $payroll['special_holiday_ot_pay'] + 
+       //     $payroll['uniform_allowance'] -
+       //     $payroll['late_undertime'];
+       // $payroll['total_deductions'] = $payroll['sss'] + $payroll['philhealth'] + $payroll['pagibig'] + $payroll['cash_advance'] + $payroll['cash_bond'];
+       // $payroll['net_pay'] = $payroll['gross_pay'] - $payroll['total_deductions'];
+   // } else {
+   //     $payroll = $calculator->calculatePayrollForGuard($userId, null, null, $startDate, $endDate);
+   // }$payrollResults[] = array_merge(['user_id' => $userId, 'name' => $user['full_name']], $payroll);
 ?>
 
 
 <!DOCTYPE html>
-<html lang="en">
 <head>
+    <title>Payroll - Green Meadows Security Agency</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payroll - Green Meadows Security Agency</title>
@@ -206,10 +262,11 @@ if (empty($startDate) || empty($dateRange)) {
                 </div>
                 <div class="col-md-2">
                     <label for="dateRange" class="form-label">Cutoff Period</label>
+                    <?php $fullLabel = '1-' . $lastDayOfMonth; $secondLabel = '16-' . $lastDayOfMonth; ?>
                     <select class="form-select" id="dateRange" name="dateRange">
                         <option value="1-15" <?php if($dateRange==='1-15') echo 'selected'; ?>>1st - 15th</option>
-                        <option value="16-31" <?php if($dateRange==='16-31') echo 'selected'; ?>>16th - 31st</option>
-                        <option value="1-31" <?php if($dateRange==='1-31') echo 'selected'; ?>>1st - 31st</option>
+                        <option value="<?php echo $secondLabel; ?>" <?php if($dateRange===$secondLabel) echo 'selected'; ?>>16th - <?php echo $lastDayOfMonth; ?></option>
+                        <option value="<?php echo $fullLabel; ?>" <?php if($dateRange===$fullLabel) echo 'selected'; ?>>1st - <?php echo $lastDayOfMonth; ?></option>
                     </select>
                 </div>
                 <div class="col-md-3">

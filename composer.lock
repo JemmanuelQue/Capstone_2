@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ca0d403c4894443f9a17e2b3ab4793cf",
+    "content-hash": "f1dc5b8766497ad7b151e6e950e89c63",
     "packages": [
         {
             "name": "composer/pcre",
@@ -858,16 +858,16 @@
         },
         {
             "name": "phpoffice/phpspreadsheet",
-            "version": "4.2.0",
+            "version": "5.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPOffice/PhpSpreadsheet.git",
-                "reference": "5f6d7410e5fd72cac1aa67d4f05f4fe664d01ba6"
+                "reference": "3b8994b3aac4b61018bc04fc8c441f4fd68c18eb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPOffice/PhpSpreadsheet/zipball/5f6d7410e5fd72cac1aa67d4f05f4fe664d01ba6",
-                "reference": "5f6d7410e5fd72cac1aa67d4f05f4fe664d01ba6",
+                "url": "https://api.github.com/repos/PHPOffice/PhpSpreadsheet/zipball/3b8994b3aac4b61018bc04fc8c441f4fd68c18eb",
+                "reference": "3b8994b3aac4b61018bc04fc8c441f4fd68c18eb",
                 "shasum": ""
             },
             "require": {
@@ -897,7 +897,7 @@
                 "dealerdirect/phpcodesniffer-composer-installer": "dev-main",
                 "dompdf/dompdf": "^2.0 || ^3.0",
                 "friendsofphp/php-cs-fixer": "^3.2",
-                "mitoteam/jpgraph": "^10.3",
+                "mitoteam/jpgraph": "^10.5",
                 "mpdf/mpdf": "^8.1.1",
                 "phpcompatibility/php-compatibility": "^9.3",
                 "phpstan/phpstan": "^1.1 || ^2.0",
@@ -909,7 +909,7 @@
             },
             "suggest": {
                 "dompdf/dompdf": "Option for rendering PDF with PDF Writer",
-                "ext-intl": "PHP Internationalization Functions",
+                "ext-intl": "PHP Internationalization Functions, regquired for NumberFormat Wizard",
                 "mitoteam/jpgraph": "Option for rendering charts, or including charts with PDF or HTML Writers",
                 "mpdf/mpdf": "Option for rendering PDF with PDF Writer",
                 "tecnickcom/tcpdf": "Option for rendering PDF with PDF Writer"
@@ -958,9 +958,9 @@
             ],
             "support": {
                 "issues": "https://github.com/PHPOffice/PhpSpreadsheet/issues",
-                "source": "https://github.com/PHPOffice/PhpSpreadsheet/tree/4.2.0"
+                "source": "https://github.com/PHPOffice/PhpSpreadsheet/tree/5.2.0"
             },
-            "time": "2025-04-17T02:41:45+00:00"
+            "time": "2025-10-26T15:54:22+00:00"
         },
         {
             "name": "psr/http-client",

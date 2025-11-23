@@ -110,6 +110,12 @@ class PayrollCalculator {
         if ($timeOut < $timeIn) {
             $timeOut->modify('+1 day');
         }
+
+        // Accumulate total hours worked (raw duration regardless of categorization)
+        $workedHours = ($timeOut->getTimestamp() - $timeIn->getTimestamp()) / 3600;
+        if ($workedHours > 0) {
+            $result['total_hours_worked'] += $workedHours;
+        }
         
         // Get day of the week (1=Monday, 7=Sunday)
         $dayOfWeek = (int)$timeIn->format('N');
@@ -229,9 +235,11 @@ class PayrollCalculator {
                 if ($isRestDay) {
                     $multiplier = 1.3; // Rest day multiplier
                     $result['special_holiday_pay'] += $regularHours * $hourlyRate * $multiplier;
+                        $result['special_holiday_hours'] += $regularHours;
                 } else {
                     // Regular day pay
                     $result['regular_hours_pay'] += $regularHours * $hourlyRate * 1.0;
+                        $result['regular_hours'] += $regularHours;
                 }
             }
         }
@@ -261,9 +269,11 @@ class PayrollCalculator {
                     if ($isRestDay) {
                         $multiplier = 1.625; // Rest day OT: 1.3 × 1.25 = 1.625
                         $result['special_holiday_ot_pay'] += $otHours * $hourlyRate * $multiplier;
+                            $result['special_holiday_ot_hours'] += $otHours;
                     } else {
                         $multiplier = 1.25; // Regular OT: 1.25 (125%)
                         $result['ot_pay'] += $otHours * $hourlyRate * $multiplier;
+                            $result['ot_hours'] += $otHours;
                     }
                 }
             }
@@ -279,6 +289,7 @@ class PayrollCalculator {
             } else {
                 // Night differential (additional 10%)
                 $result['night_diff_pay'] += $nightDiffHours * $hourlyRate * 0.1;
+                    $result['night_diff_hours'] += $nightDiffHours;
             }
         }
     }
@@ -326,8 +337,10 @@ class PayrollCalculator {
                 if ($isRestDay) {
                     $multiplier = 1.3; // Rest day multiplier
                     $result['special_holiday_pay'] += $regHours * $hourlyRate * $multiplier;
+                    $result['special_holiday_hours'] += $regHours;
                 } else {
                     $result['regular_hours_pay'] += $regHours * $hourlyRate * 1.0;
+                    $result['regular_hours'] += $regHours;
                 }
             }
         }
@@ -349,6 +362,7 @@ class PayrollCalculator {
                     $multiplier = $isRestDay ? 1.43 : 1.1; // Rest day with ND: 1.3 × 1.1 = 1.43
                     $result['night_diff_pay'] += $ndHours * $hourlyRate * $multiplier;
                 }
+                $result['night_diff_hours'] += $ndHours;
             }
         }
         
@@ -373,10 +387,10 @@ class PayrollCalculator {
                 if ($nextDayHolidayType) {
                     $this->applyHolidayPay($nextDayHolidayType, $ndHours, $hourlyRate, $nextDayIsRestDay, true, $result);
                 } else {
-                    // FIXED: May 5 is Monday (not rest day), so only night differential applies
-                    $multiplier = $nextDayIsRestDay ? 1.43 : 1.1; // Regular Monday = 1.1 only
+                    $multiplier = $nextDayIsRestDay ? 1.43 : 1.1;
                     $result['night_diff_pay'] += $ndHours * $hourlyRate * $multiplier;
                 }
+                $result['night_diff_hours'] += $ndHours;
             }
         }
         
@@ -400,17 +414,17 @@ class PayrollCalculator {
                 if ($nextDayHolidayType) {
                     $this->applyHolidayOvertimePay($nextDayHolidayType, $ndOtHours, $hourlyRate, $nextDayIsRestDay, true, $result);
                 } else {
-                    // FIXED: Use 1.25 for regular overtime, not 1.3
                     if ($nextDayIsRestDay) {
-                        // Rest day, night shift, OT = 1.3 × 1.1 × 1.25 = 1.7875
                         $multiplier = 1.7875;
                         $result['special_holiday_ot_pay'] += $ndOtHours * $hourlyRate * $multiplier;
+                        $result['special_holiday_ot_hours'] += $ndOtHours;
                     } else {
-                        // FIXED: Regular day, night shift, OT = 1 × 1.1 × 1.25 = 1.375
                         $multiplier = 1.375;
                         $result['ot_pay'] += $ndOtHours * $hourlyRate * $multiplier;
+                        $result['ot_hours'] += $ndOtHours;
                     }
                 }
+                $result['night_diff_hours'] += $ndOtHours;
             }
         }
         
@@ -438,6 +452,7 @@ class PayrollCalculator {
                     $multiplier = 2.0;  // Regular holiday = 2.0
                 }
                 $result['legal_holiday_pay'] += $amount * $multiplier;
+                $result['legal_holiday_hours'] += $hours;
                 break;
                 
             case 'Special Non-Working':
@@ -451,6 +466,7 @@ class PayrollCalculator {
                     $multiplier = 1.3;  // Special non-working = 1.3
                 }
                 $result['special_holiday_pay'] += $amount * $multiplier;
+                $result['special_holiday_hours'] += $hours;
                 break;
                 
             case 'Special Working':
@@ -464,6 +480,7 @@ class PayrollCalculator {
                     $multiplier = 1.0;  // Regular day = 1.0
                 }
                 $result['regular_hours_pay'] += $amount * $multiplier; // Special working days use regular pay category
+                $result['regular_hours'] += $hours;
                 break;
                 
             case 'Double Holiday':
@@ -477,6 +494,7 @@ class PayrollCalculator {
                     $multiplier = 3.0;  // Double holiday = 3.0
                 }
                 $result['legal_holiday_pay'] += $amount * $multiplier; // Double holidays go into legal holidays category
+                $result['legal_holiday_hours'] += $hours;
                 break;
                 
             case 'Double Special Non-Working':
@@ -490,8 +508,10 @@ class PayrollCalculator {
                     $multiplier = 1.5;   // Double special = 1.5
                 }
                 $result['special_holiday_pay'] += $amount * $multiplier;
+                $result['special_holiday_hours'] += $hours;
                 break;
         }
+            if ($isNightShift) { $result['night_diff_hours'] += $hours; }
     }
     
     /**
@@ -513,6 +533,7 @@ class PayrollCalculator {
                     $multiplier = 2.5;  // Regular holiday, OT = 2 × 1.25 = 2.5
                 }
                 $result['holiday_ot_pay'] += $amount * $multiplier;
+                $result['holiday_ot_hours'] += $hours;
                 break;
                 
             case 'Special Non-Working':
@@ -526,6 +547,7 @@ class PayrollCalculator {
                     $multiplier = 1.625; // Special, OT = 1.3 × 1.25 = 1.625
                 }
                 $result['special_holiday_ot_pay'] += $amount * $multiplier;
+                $result['special_holiday_ot_hours'] += $hours;
                 break;
                 
             case 'Special Working':
@@ -539,6 +561,7 @@ class PayrollCalculator {
                     $multiplier = 1.25;  // OT = 1.25
                 }
                 $result['ot_pay'] += $amount * $multiplier;
+                $result['ot_hours'] += $hours;
                 break;
                 
             case 'Double Holiday':
@@ -552,6 +575,7 @@ class PayrollCalculator {
                     $multiplier = 3.75;  // Double, OT = 3 × 1.25 = 3.75
                 }
                 $result['holiday_ot_pay'] += $amount * $multiplier;
+                $result['holiday_ot_hours'] += $hours;
                 break;
                 
             case 'Double Special Non-Working':
@@ -565,8 +589,10 @@ class PayrollCalculator {
                     $multiplier = 1.875; // Double special, OT = 1.5 × 1.25 = 1.875
                 }
                 $result['special_holiday_ot_pay'] += $amount * $multiplier;
+                $result['special_holiday_ot_hours'] += $hours;
                 break;
         }
+            if ($isNightShift) { $result['night_diff_hours'] += $hours; }
     }
     
     /**
@@ -628,22 +654,25 @@ class PayrollCalculator {
      * Calculate deductions based on gross pay and settings
      */
     private function calculateDeductions($userId, &$result, $startDate, $endDate, $dailyRate) {
-        // FIXED: Calculate Philhealth using the new formula
-        // Formula: Daily Rate × 313 days ÷ 12 months × 5% ÷ 2 (employee share)
-        $annualSalary = $dailyRate * 313;
-        $monthlySalary = $annualSalary / 12;
-        $totalPhilHealthContribution = $monthlySalary * 0.05;
-        $employeePhilHealthShare = $totalPhilHealthContribution / 2;
-        
-        // For bi-weekly payroll, divide monthly contribution by 2
-        if ($this->isHalfMonthPeriod($startDate, $endDate)) {
-            $result['philhealth'] = $employeePhilHealthShare / 2;
+        // Determine if this is a half month period to derive gross monthly pay
+        $isHalf = $this->isHalfMonthPeriod($startDate, $endDate);
+        $monthlyGrossPay = $isHalf ? ($result['gross_pay'] * 2) : $result['gross_pay'];
+
+        // PhilHealth monthly employee share = (Monthly Gross × 5%) ÷ 2
+        // If half-month cutoff, pro-rate again (divide monthly employee share by 2)
+        $philhealthMonthlyEmployeeShare = ($monthlyGrossPay * 0.05) / 2; // monthly employee share
+        $result['philhealth'] = round($isHalf ? ($philhealthMonthlyEmployeeShare / 2) : $philhealthMonthlyEmployeeShare, 2);
+
+        // Pag-IBIG per user requirement:
+        // Updated: Half-month cutoff (1-15 or 16-end): (Cutoff Gross × 2%)
+        // Full-month (1-31): (Month Gross × 2%) capped at 200 if >= 10,000
+        if ($isHalf) {
+            $pagibig = ($result['gross_pay'] * 0.02); // e.g. 988.25 * 0.02 = 19.765 -> 19.77
         } else {
-            $result['philhealth'] = $employeePhilHealthShare;
+            $pagibig = $result['gross_pay'] * 0.02;
+            if ($result['gross_pay'] >= 10000 && $pagibig > 200) { $pagibig = 200.00; }
         }
-        
-        // Fixed Pag-IBIG deduction of ₱200
-        $result['pagibig'] = 200.00;
+        $result['pagibig'] = round($pagibig, 2);
         
         // Calculate SSS deduction based on monthly gross pay
         $sssDeduction = $this->calculateSSSDeduction($result['gross_pay']);
@@ -731,37 +760,37 @@ class PayrollCalculator {
      */
     private function calculateSSSDeduction($monthlyCompensation) {
         $sssTable = [
-            ['min' => 0.00,      'max' => 5249.99,  'contribution' => 500.00],
-            ['min' => 5250.00,   'max' => 5749.99,  'contribution' => 550.00],
-            ['min' => 5750.00,   'max' => 6249.99,  'contribution' => 600.00],
-            ['min' => 6250.00,   'max' => 6749.99,  'contribution' => 650.00],
-            ['min' => 6750.00,   'max' => 7249.99,  'contribution' => 700.00],
-            ['min' => 7250.00,   'max' => 7749.99,  'contribution' => 750.00],
-            ['min' => 7750.00,   'max' => 8249.99,  'contribution' => 800.00],
-            ['min' => 8250.00,   'max' => 8749.99,  'contribution' => 850.00],
-            ['min' => 8750.00,   'max' => 9249.99,  'contribution' => 900.00],
-            ['min' => 9250.00,   'max' => 9749.99,  'contribution' => 950.00],
-            ['min' => 9750.00,   'max' => 10249.99, 'contribution' => 1000.00],
-            ['min' => 10250.00,  'max' => 10749.99, 'contribution' => 1050.00],
-            ['min' => 10750.00,  'max' => 11249.99, 'contribution' => 1100.00],
-            ['min' => 11250.00,  'max' => 11749.99, 'contribution' => 1150.00],
-            ['min' => 11750.00,  'max' => 12249.99, 'contribution' => 1200.00],
-            ['min' => 12250.00,  'max' => 12749.99, 'contribution' => 1250.00],
-            ['min' => 12750.00,  'max' => 13249.99, 'contribution' => 1300.00],
-            ['min' => 13250.00,  'max' => 13749.99, 'contribution' => 1350.00],
-            ['min' => 13750.00,  'max' => 14249.99, 'contribution' => 1400.00],
-            ['min' => 14250.00,  'max' => 14749.99, 'contribution' => 1450.00],
-            ['min' => 14750.00,  'max' => 15249.99, 'contribution' => 1500.00],
-            ['min' => 15250.00,  'max' => 15749.99, 'contribution' => 1550.00],
-            ['min' => 15750.00,  'max' => 16249.99, 'contribution' => 1600.00],
-            ['min' => 16250.00,  'max' => 16749.99, 'contribution' => 1650.00],
-            ['min' => 16750.00,  'max' => 17249.99, 'contribution' => 1700.00],
-            ['min' => 17250.00,  'max' => 17749.99, 'contribution' => 1750.00],
-            ['min' => 17750.00,  'max' => 18249.99, 'contribution' => 1800.00],
-            ['min' => 18250.00,  'max' => 18749.99, 'contribution' => 1850.00],
-            ['min' => 18750.00,  'max' => 19249.99, 'contribution' => 1900.00],
-            ['min' => 19250.00,  'max' => 19749.99, 'contribution' => 1950.00],
-            ['min' => 19750.00,  'max' => PHP_FLOAT_MAX, 'contribution' => 2000.00]
+            ['min' => 0.00,      'max' => 5249.99,  'contribution' => 250.00],
+            ['min' => 5250.00,   'max' => 5749.99,  'contribution' => 275.00],
+            ['min' => 5750.00,   'max' => 6249.99,  'contribution' => 300.00],
+            ['min' => 6250.00,   'max' => 6749.99,  'contribution' => 325.00],
+            ['min' => 6750.00,   'max' => 7249.99,  'contribution' => 350.00],
+            ['min' => 7250.00,   'max' => 7749.99,  'contribution' => 375.00],
+            ['min' => 7750.00,   'max' => 8249.99,  'contribution' => 400.00],
+            ['min' => 8250.00,   'max' => 8749.99,  'contribution' => 425.00],
+            ['min' => 8750.00,   'max' => 9249.99,  'contribution' => 450.00],
+            ['min' => 9250.00,   'max' => 9749.99,  'contribution' => 475.00],
+            ['min' => 9750.00,   'max' => 10249.99, 'contribution' => 500.00],
+            ['min' => 10250.00,  'max' => 10749.99, 'contribution' => 525.00],
+            ['min' => 10750.00,  'max' => 11249.99, 'contribution' => 550.00],
+            ['min' => 11250.00,  'max' => 11749.99, 'contribution' => 575.00],
+            ['min' => 11750.00,  'max' => 12249.99, 'contribution' => 600.00],
+            ['min' => 12250.00,  'max' => 12749.99, 'contribution' => 625.00],
+            ['min' => 12750.00,  'max' => 13249.99, 'contribution' => 650.00],
+            ['min' => 13250.00,  'max' => 13749.99, 'contribution' => 675.00],
+            ['min' => 13750.00,  'max' => 14249.99, 'contribution' => 700.00],
+            ['min' => 14250.00,  'max' => 14749.99, 'contribution' => 725.00],
+            ['min' => 14750.00,  'max' => 15249.99, 'contribution' => 750.00],
+            ['min' => 15250.00,  'max' => 15749.99, 'contribution' => 775.00],
+            ['min' => 15750.00,  'max' => 16249.99, 'contribution' => 800.00],
+            ['min' => 16250.00,  'max' => 16749.99, 'contribution' => 825.00],
+            ['min' => 16750.00,  'max' => 17249.99, 'contribution' => 850.00],
+            ['min' => 17250.00,  'max' => 17749.99, 'contribution' => 875.00],
+            ['min' => 17750.00,  'max' => 18249.99, 'contribution' => 900.00],
+            ['min' => 18250.00,  'max' => 18749.99, 'contribution' => 925.00],
+            ['min' => 18750.00,  'max' => 19249.99, 'contribution' => 950.00],
+            ['min' => 19250.00,  'max' => 19749.99, 'contribution' => 975.00],
+            ['min' => 19750.00,  'max' => PHP_FLOAT_MAX, 'contribution' => 1000.00]
         ];
         
         foreach ($sssTable as $bracket) {
@@ -794,12 +823,19 @@ class PayrollCalculator {
     private function getEmptyPayrollArray() {
         return [
             'regular_hours_pay' => 0,
+            'regular_hours' => 0,
             'ot_pay' => 0,
+            'ot_hours' => 0,
             'night_diff_pay' => 0,
+            'night_diff_hours' => 0,
             'legal_holiday_pay' => 0,
+            'legal_holiday_hours' => 0,
             'holiday_ot_pay' => 0,
+            'holiday_ot_hours' => 0,
             'special_holiday_pay' => 0,
+            'special_holiday_hours' => 0,
             'special_holiday_ot_pay' => 0,
+            'special_holiday_ot_hours' => 0,
             'uniform_allowance' => 0,
             'ctp_allowance' => 0,
             'retroactive_pay' => 0,
@@ -818,7 +854,7 @@ class PayrollCalculator {
             'total_deductions' => 0,
             'net_pay' => 0,
             'hourly_rate' => 0,
-            'daily_rate' => 0
+            'total_hours_worked' => 0
         ];
     }
     

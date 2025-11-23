@@ -344,30 +344,7 @@ $notStartedCount = count(array_filter($filteredGuards, function($g) { return $g[
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="logo-container">
-            <img src="../images/greenmeadows_logo.jpg" alt="Green Meadows Logo" class="logo">
-            <div class="agency-name">
-                <div>SECURITY AGENCY</div>
-            </div>
-        </div>
-        <ul class="nav flex-column mt-4">
-            <li class="nav-item">
-                <a href="dashboard.php" class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
-                    <span class="material-icons">dashboard</span>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-            <li class="nav-item mt-5">
-                <a href="../logout.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Logout">
-                    <span class="material-icons">logout</span>
-                    <span>Logout</span>
-                </a>
-            </li>
-        </ul>
-    </div>
-
+       <?php include '../global/oic_sidebar.php'; ?>
     <!-- Main Content -->
     <div class="main-content" id="main-content">
         <!-- Header -->
