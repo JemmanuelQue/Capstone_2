@@ -66,6 +66,19 @@ if ($DEBUG_MODE) {
             }
         }
     });
+
+    // Forced error triggers for developer testing: pass force_error=warning|exception|fatal
+    if (isset($_REQUEST['force_error'])) {
+        $force = $_REQUEST['force_error'];
+        if ($force === 'warning') {
+            trigger_error('Forced developer test warning', E_USER_WARNING);
+        } elseif ($force === 'exception') {
+            throw new RuntimeException('Forced developer test exception');
+        } elseif ($force === 'fatal') {
+            // Intentionally include a non-existent file to cause fatal error
+            require __DIR__ . '/__nonexistent_forced_fatal__.php';
+        }
+    }
 }
 
 // Helper: send structured JSON with optional status and debug headers
@@ -76,6 +89,22 @@ function sendJson(array $payload, int $statusCode = 200, ?string $errorCode = nu
     }
     header('Content-Type: application/json');
     echo json_encode($payload);
+}
+
+// Map PHP file upload error codes to human-readable explanation
+function mapUploadError(?int $code): string {
+    if ($code === null) return 'No file field received';
+    switch ($code) {
+        case UPLOAD_ERR_INI_SIZE: return 'File exceeds upload_max_filesize in php.ini';
+        case UPLOAD_ERR_FORM_SIZE: return 'File exceeds MAX_FILE_SIZE specified in the HTML form';
+        case UPLOAD_ERR_PARTIAL: return 'File was only partially uploaded';
+        case UPLOAD_ERR_NO_FILE: return 'No file was uploaded';
+        case UPLOAD_ERR_NO_TMP_DIR: return 'Missing temporary folder';
+        case UPLOAD_ERR_CANT_WRITE: return 'Failed to write file to disk (permissions)';
+        case UPLOAD_ERR_EXTENSION: return 'A PHP extension stopped the file upload';
+        case UPLOAD_ERR_OK: return 'OK';
+        default: return 'Unknown upload error code';
+    }
 }
 
 // Enforce OIC role (8) for all actions
@@ -377,10 +406,28 @@ try {
                 ], 500, 'missing_phpspreadsheet_class', $DEBUG_MODE); break; 
             }
             if (!isset($_FILES['excelFile']) || $_FILES['excelFile']['error'] !== UPLOAD_ERR_OK) {
+                $rawErr = $_FILES['excelFile']['error'] ?? null;
+                $mapped = mapUploadError($rawErr);
+                $debugBlock = null;
+                if ($DEBUG_MODE) {
+                    $debugBlock = [
+                        'code' => 'upload_error',
+                        'fileError' => $rawErr,
+                        'fileErrorMessage' => $mapped,
+                        'fieldPresent' => isset($_FILES['excelFile']),
+                        'receivedFields' => array_keys($_FILES ?: []),
+                        'contentType' => $_SERVER['CONTENT_TYPE'] ?? null,
+                        'postMaxSize' => ini_get('post_max_size'),
+                        'uploadMaxFilesize' => ini_get('upload_max_filesize'),
+                        'tmpDirWritable' => is_writable(sys_get_temp_dir()),
+                        'tmpDir' => sys_get_temp_dir(),
+                        'possibleErrors' => $possibleImportErrors
+                    ];
+                }
                 sendJson([
                     'success' => false,
                     'message' => 'No file uploaded or upload error',
-                    'debug' => $DEBUG_MODE ? ['code' => 'upload_error', 'fileError' => $_FILES['excelFile']['error'] ?? null, 'possibleErrors' => $possibleImportErrors] : null
+                    'debug' => $debugBlock
                 ], 400, 'upload_error', $DEBUG_MODE); break; 
             }
             $oicStmt = $conn->prepare('SELECT First_Name, Last_Name FROM users WHERE User_ID = ?');
