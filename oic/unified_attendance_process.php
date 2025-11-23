@@ -32,6 +32,42 @@ $possibleImportErrors = [
     'unknown_exception'
 ];
 
+// Collect non-fatal PHP errors when in debug mode
+if ($DEBUG_MODE) {
+    $GLOBALS['__debug_errors'] = [];
+    set_error_handler(function($errno, $errstr, $errfile, $errline) {
+        $GLOBALS['__debug_errors'][] = [
+            'type' => $errno,
+            'message' => $errstr,
+            'file' => $errfile,
+            'line' => $errline
+        ];
+        // Return false so normal PHP error handling (logging) still occurs
+        return false;
+    });
+    register_shutdown_function(function() {
+        $last = error_get_last();
+        if ($last && !headers_sent()) {
+            // Only emit if nothing was sent yet and it's a fatal type
+            $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+            if (in_array($last['type'], $fatalTypes, true)) {
+                http_response_code(500);
+                header('Content-Type: application/json');
+                header('X-Debug-Error-Code: php_fatal');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Fatal PHP error encountered',
+                    'debug' => [
+                        'code' => 'php_fatal',
+                        'lastError' => $last,
+                        'collectedErrors' => $GLOBALS['__debug_errors'] ?? []
+                    ]
+                ]);
+            }
+        }
+    });
+}
+
 // Helper: send structured JSON with optional status and debug headers
 function sendJson(array $payload, int $statusCode = 200, ?string $errorCode = null, bool $debugMode = false) : void {
     http_response_code($statusCode);
@@ -758,5 +794,21 @@ try {
     }
 } catch (Exception $e) {
     if (isset($conn) && $conn->inTransaction()) { $conn->rollBack(); }
-    echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    $payload = [
+        'success' => false,
+        'message' => $DEBUG_MODE ? 'Unhandled exception' : 'An internal error occurred',
+    ];
+    if ($DEBUG_MODE) {
+        $payload['debug'] = [
+            'code' => 'unknown_exception',
+            'exceptionMessage' => $e->getMessage(),
+            'exceptionType' => get_class($e),
+            'trace' => explode("\n", $e->getTraceAsString()),
+            'collectedErrors' => $GLOBALS['__debug_errors'] ?? []
+        ];
+        header('X-Debug-Error-Code: unknown_exception');
+    }
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode($payload);
 }
