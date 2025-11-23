@@ -1447,6 +1447,8 @@ $(document).ready(function() {
         
         var formData = new FormData(this);
         formData.append('action', 'import');
+        // Force backend debug mode for richer diagnostics
+        formData.append('debug', '1');
         var fileInput = $('#excelFile')[0];
         var guardId = $('#importGuardId').val();
         if (!guardId) {
@@ -1477,7 +1479,7 @@ $(document).ready(function() {
             data: formData,
             processData: false,
             contentType: false,
-            success: function(response) {
+            success: function(response, textStatus, xhr) {
                 try {
                     var result = typeof response === 'string' ? JSON.parse(response) : response;
                     // Log full JSON and debug rows for diagnostics
@@ -1485,6 +1487,9 @@ $(document).ready(function() {
                     if (result && result.debug && Array.isArray(result.debug.rowErrors)) {
                         console.table(result.debug.rowErrors);
                     }
+                    // Log debug headers if present
+                    console.log('[IMPORT] X-Debug-Error-Code:', xhr.getResponseHeader('X-Debug-Error-Code'));
+                    console.log('[IMPORT] X-Upload-Tmp-Path:', xhr.getResponseHeader('X-Upload-Tmp-Path'));
                     
                     if (result.success) {
                         Swal.fire({
@@ -1517,7 +1522,10 @@ $(document).ready(function() {
                     });
                 }
             },
-            error: function() {
+            error: function(xhr, status, err) {
+                console.error('[IMPORT] AJAX error status:', status, 'err:', err);
+                console.log('[IMPORT] X-Debug-Error-Code:', xhr.getResponseHeader('X-Debug-Error-Code'));
+                console.log('[IMPORT] X-Upload-Tmp-Path:', xhr.getResponseHeader('X-Upload-Tmp-Path'));
                 Swal.fire({
                     icon: 'error',
                     title: 'Upload Error',
