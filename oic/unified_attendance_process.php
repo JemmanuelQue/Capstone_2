@@ -6,6 +6,42 @@ require_once '../db_connection.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_REQUEST['action'] ?? '';
 
+// Developer debug flag (pass ?debug=1 or include in POST)
+$DEBUG_MODE = isset($_REQUEST['debug']) && $_REQUEST['debug'] === '1';
+
+// Enumerate all possible import error codes for developer reference
+$possibleImportErrors = [
+    'missing_vendor_autoload',
+    'missing_phpspreadsheet_class',
+    'invalid_request_method',
+    'upload_error',
+    'spreadsheet_load_failure',
+    'header_mismatch',
+    'no_oic_locations',
+    'unauthorized_guard',
+    'guard_not_found',
+    'missing_fields',
+    'unauthorized_location',
+    'invalid_date',
+    'invalid_time_in',
+    'invalid_time_out',
+    'day_shift_cross_date',
+    'night_shift_not_overnight',
+    'duplicate',
+    'db_error',
+    'unknown_exception'
+];
+
+// Helper: send structured JSON with optional status and debug headers
+function sendJson(array $payload, int $statusCode = 200, ?string $errorCode = null, bool $debugMode = false) : void {
+    http_response_code($statusCode);
+    if ($debugMode && $errorCode) {
+        header('X-Debug-Error-Code: ' . $errorCode);
+    }
+    header('Content-Type: application/json');
+    echo json_encode($payload);
+}
+
 // Enforce OIC role (8) for all actions
 if (!validateSession($conn, 8, false)) {
     if ($action === 'download_template') {
@@ -282,13 +318,34 @@ header('Content-Type: application/json');
 try {
     switch ($action) {
         case 'import': {
-            if ($method !== 'POST') { echo json_encode(['success' => false, 'message' => 'Invalid request method']); break; }
-            if (!file_exists('../vendor/autoload.php')) { echo json_encode(['success' => false, 'message' => 'PhpSpreadsheet not installed']); break; }
+            if ($method !== 'POST') { 
+                sendJson([
+                    'success' => false,
+                    'message' => 'Invalid request method',
+                    'debug' => $DEBUG_MODE ? ['code' => 'invalid_request_method', 'possibleErrors' => $possibleImportErrors] : null
+                ], 400, 'invalid_request_method', $DEBUG_MODE); break; 
+            }
+            if (!file_exists('../vendor/autoload.php')) { 
+                sendJson([
+                    'success' => false,
+                    'message' => 'PhpSpreadsheet not installed',
+                    'debug' => $DEBUG_MODE ? ['code' => 'missing_vendor_autoload', 'possibleErrors' => $possibleImportErrors] : null
+                ], 500, 'missing_vendor_autoload', $DEBUG_MODE); break; 
+            }
             require_once '../vendor/autoload.php';
-            if (!class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) { echo json_encode(['success' => false, 'message' => 'PhpSpreadsheet classes not found']); break; }
+            if (!class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) { 
+                sendJson([
+                    'success' => false,
+                    'message' => 'PhpSpreadsheet classes not found',
+                    'debug' => $DEBUG_MODE ? ['code' => 'missing_phpspreadsheet_class', 'possibleErrors' => $possibleImportErrors] : null
+                ], 500, 'missing_phpspreadsheet_class', $DEBUG_MODE); break; 
+            }
             if (!isset($_FILES['excelFile']) || $_FILES['excelFile']['error'] !== UPLOAD_ERR_OK) {
-                echo json_encode(['success' => false, 'message' => 'No file uploaded or upload error']);
-                break;
+                sendJson([
+                    'success' => false,
+                    'message' => 'No file uploaded or upload error',
+                    'debug' => $DEBUG_MODE ? ['code' => 'upload_error', 'fileError' => $_FILES['excelFile']['error'] ?? null, 'possibleErrors' => $possibleImportErrors] : null
+                ], 400, 'upload_error', $DEBUG_MODE); break; 
             }
             $oicStmt = $conn->prepare('SELECT First_Name, Last_Name FROM users WHERE User_ID = ?');
             $oicStmt->execute([$_SESSION['user_id']]);
@@ -296,7 +353,15 @@ try {
             $oicName = ($oicData['First_Name'] ?? 'OIC') . ' ' . ($oicData['Last_Name'] ?? '');
 
             $file = $_FILES['excelFile']['tmp_name'];
-            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+            try {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+            } catch (Exception $e) {
+                sendJson([
+                    'success' => false,
+                    'message' => 'Failed to read spreadsheet',
+                    'debug' => $DEBUG_MODE ? ['code' => 'spreadsheet_load_failure', 'exception' => $e->getMessage(), 'possibleErrors' => $possibleImportErrors] : null
+                ], 500, 'spreadsheet_load_failure', $DEBUG_MODE); break; 
+            }
             $sheet = $spreadsheet->getActiveSheet();
             $highestRow = $sheet->getHighestRow();
 
@@ -310,24 +375,46 @@ try {
                 'context' => [ 'oicUserId' => $_SESSION['user_id'] ?? null, 'guardId' => (isset($_POST['guardId']) && ctype_digit($_POST['guardId'])) ? (int)$_POST['guardId'] : null ]
             ];
             if ($actualHeaders !== $expectedHeaders) {
-                echo json_encode(['success' => false, 'message' => 'Invalid template format. Please download and use the correct template.', 'debug' => $debug]);
-                break;
+                $debug['code'] = 'header_mismatch';
+                if ($DEBUG_MODE) { $debug['possibleErrors'] = $possibleImportErrors; }
+                sendJson([
+                    'success' => false,
+                    'message' => 'Invalid template format. Please download and use the correct template.',
+                    'debug' => $DEBUG_MODE ? $debug : null
+                ], 422, 'header_mismatch', $DEBUG_MODE); break; 
             }
 
             $oicLocations = getOicLocations($conn);
-            if (empty($oicLocations)) { echo json_encode(['success' => false, 'message' => 'You are not assigned to any locations.', 'debug' => $debug]); break; }
+            if (empty($oicLocations)) { 
+                $debug['code'] = 'no_oic_locations';
+                if ($DEBUG_MODE) { $debug['possibleErrors'] = $possibleImportErrors; }
+                sendJson([
+                    'success' => false,
+                    'message' => 'You are not assigned to any locations.',
+                    'debug' => $DEBUG_MODE ? $debug : null
+                ], 403, 'no_oic_locations', $DEBUG_MODE); break; 
+            }
 
             $targetGuard = null;
             if (isset($_POST['guardId']) && ctype_digit($_POST['guardId'])) {
                 $guardIdParam = (int)$_POST['guardId'];
                 if (!isGuardManagedByOIC($conn, $guardIdParam)) {
-                    echo json_encode(['success' => false, 'message' => 'Unauthorized: Guard not under your locations']);
-                    break;
+                    sendJson([
+                        'success' => false,
+                        'message' => 'Unauthorized: Guard not under your locations',
+                        'debug' => $DEBUG_MODE ? ['code' => 'unauthorized_guard', 'guardId' => $guardIdParam, 'possibleErrors' => $possibleImportErrors] : null
+                    ], 403, 'unauthorized_guard', $DEBUG_MODE); break; 
                 }
                 $tgStmt = $conn->prepare('SELECT u.User_ID, COALESCE(u.Employee_ID, u.employee_id) AS EmpID, u.First_Name, u.Last_Name FROM users u WHERE u.User_ID = ? AND u.Role_ID = 5 AND u.status = "Active" LIMIT 1');
                 $tgStmt->execute([$guardIdParam]);
                 $targetGuard = $tgStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-                if (!$targetGuard) { echo json_encode(['success' => false, 'message' => 'Selected guard not found or inactive.']); break; }
+                if (!$targetGuard) { 
+                    sendJson([
+                        'success' => false,
+                        'message' => 'Selected guard not found or inactive.',
+                        'debug' => $DEBUG_MODE ? ['code' => 'guard_not_found', 'guardId' => $guardIdParam, 'possibleErrors' => $possibleImportErrors] : null
+                    ], 404, 'guard_not_found', $DEBUG_MODE); break; 
+                }
             }
 
             $successCount = 0; $errorCount = 0; $errors = [];
@@ -409,9 +496,9 @@ try {
                 }
 
                 $timeInHms = parseExcelTime($timeIn);
-                if (!$timeInHms) { $errors[] = "Row $row: Invalid Time In format '" . htmlspecialchars((string)$timeIn) . "'. Use HH:MM AM/PM"; $debug['rowErrors'][] = ['row' => $row, 'code' => 'invalid_time_in']; $errorCount++; continue; }
+                if (!$timeInHms) { $errors[] = "Row $row: Invalid Time In format '" . htmlspecialchars((string)$timeIn) . "'. Use HH:MM AM/PM"; $debug['rowErrors'][] = ['row' => $row, 'code' => 'invalid_time_in', 'raw' => $timeIn]; $errorCount++; continue; }
                 $timeOutHms = parseExcelTime($timeOut);
-                if (!$timeOutHms) { $errors[] = "Row $row: Invalid Time Out format '" . htmlspecialchars((string)$timeOut) . "'. Use HH:MM AM/PM"; $debug['rowErrors'][] = ['row' => $row, 'code' => 'invalid_time_out']; $errorCount++; continue; }
+                if (!$timeOutHms) { $errors[] = "Row $row: Invalid Time Out format '" . htmlspecialchars((string)$timeOut) . "'. Use HH:MM AM/PM"; $debug['rowErrors'][] = ['row' => $row, 'code' => 'invalid_time_out', 'raw' => $timeOut]; $errorCount++; continue; }
 
                 $timeInFull = $dateFormatted . ' ' . $timeInHms;
                 $timeOutDate = $dateFormatted;
@@ -461,7 +548,14 @@ try {
                 foreach ($errors as $e) { $message .= '<li>' . htmlspecialchars($e) . '</li>'; }
                 $message .= '</ul>';
             }
-            echo json_encode(['success' => $successCount > 0, 'message' => $message, 'successCount' => $successCount, 'errorCount' => $errorCount, 'debug' => $debug]);
+            if ($DEBUG_MODE) { $debug['possibleErrors'] = $possibleImportErrors; }
+            sendJson([
+                'success' => $successCount > 0,
+                'message' => $message,
+                'successCount' => $successCount,
+                'errorCount' => $errorCount,
+                'debug' => $DEBUG_MODE ? $debug : null
+            ], 200, null, $DEBUG_MODE);
             break;
         }
         case 'add': {
