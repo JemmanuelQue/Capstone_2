@@ -14,9 +14,9 @@ $dateRange = $_GET['dateRange'] ?? '1-15';
 $lastDayOfMonth = date('t', strtotime($month . '-01'));
 
 // Normalize legacy full/second-half patterns to actual month length
-if (preg_match('/^1-3[01]$/', $dateRange) || preg_match('/^1-2[89]$/', $dateRange) || preg_match('/^1-30$/', $dateRange)) {
+if (preg_match('/^1-3[01]$/', $dateRange) || preg_match('/^1-2[89]$/', $dateRange)) {
     $dateRange = '1-' . $lastDayOfMonth;
-} elseif (preg_match('/^16-3[01]$/', $dateRange) || preg_match('/^16-2[89]$/', $dateRange) || preg_match('/^16-30$/', $dateRange)) {
+} elseif (preg_match('/^16-3[01]$/', $dateRange) || preg_match('/^16-2[89]$/', $dateRange)) {
     $dateRange = '16-' . $lastDayOfMonth;
 }
 
@@ -69,27 +69,21 @@ if (!$user) die('User not found.');
 
 $calculator = new PayrollCalculator($conn);
 
-$isFullMonth = ($dateRange === '1-' . $lastDayOfMonth);
+// Show and apply deductions only for second half (16 to last day)
+$isSecondHalf = ($dateRange === '16-' . $lastDayOfMonth);
 
-if ($isFullMonth) {
-    // Always aggregate halves (even if one half has zero hours) then recompute monthly deductions
+if ($isSecondHalf) {
+    // Compute payroll for second half only
+    $startDate = $month . '-16';
+    $endDate = date('Y-m-t', strtotime($month));
+    $payroll = $calculator->calculatePayrollForGuard($user_id, null, null, $startDate, $endDate);
+
+    // Also compute first half to derive full-month gross for deduction brackets
     $firstStart = $month . '-01';
     $firstEnd = $month . '-15';
-    $secondStart = $month . '-16';
-    $secondEnd = date('Y-m-t', strtotime($month));
     $firstHalf = $calculator->calculatePayrollForGuard($user_id, null, null, $firstStart, $firstEnd);
-    $secondHalf = $calculator->calculatePayrollForGuard($user_id, null, null, $secondStart, $secondEnd);
 
-    // Sum numeric fields
-    $payroll = $firstHalf;
-    foreach ($secondHalf as $key => $value) {
-        if (is_numeric($value) && !in_array($key, ['hourly_rate','daily_rate'])) {
-            if (!isset($payroll[$key])) { $payroll[$key] = 0; }
-            $payroll[$key] += $value;
-        }
-    }
-
-    // Recompute gross pay from summed earnings (late_undertime subtract)
+    // Recompute gross pay from earnings (late_undertime subtract)
     $payroll['gross_pay'] = 
         ($payroll['regular_hours_pay'] + 
         $payroll['ot_pay'] + 
@@ -99,16 +93,80 @@ if ($isFullMonth) {
         $payroll['special_holiday_pay'] + 
         $payroll['special_holiday_ot_pay'] + 
         $payroll['uniform_allowance']) -
-        $payroll['late_undertime'];
+        ($payroll['late_undertime'] ?? 0);
 
-    // Monthly Deductions (only shown/applied on full month payslip)
-    // Pag-IBIG: 2% of gross, capped at 200 if gross >= 10,000
-    $pagibig = $payroll['gross_pay'] * 0.02;
-    if ($payroll['gross_pay'] >= 10000 && $pagibig > 200) { $pagibig = 200.00; }
-    $payroll['pagibig'] = round($pagibig, 2);
+    // Derive monthly gross by summing first-half and second-half earnings (late/undertime subtract once per half)
+    $firstGross = (
+        ($firstHalf['regular_hours_pay'] ?? 0) +
+        ($firstHalf['ot_pay'] ?? 0) +
+        ($firstHalf['night_diff_pay'] ?? 0) +
+        ($firstHalf['legal_holiday_pay'] ?? 0) +
+        ($firstHalf['holiday_ot_pay'] ?? 0) +
+        ($firstHalf['special_holiday_pay'] ?? 0) +
+        ($firstHalf['special_holiday_ot_pay'] ?? 0) +
+        ($firstHalf['uniform_allowance'] ?? 0)
+    ) - ($firstHalf['late_undertime'] ?? 0);
+    $monthlyGross = ($firstGross + ($payroll['gross_pay'] ?? 0));
 
-    // PhilHealth: (Gross * 5%) / 2 (employee share)
-    $payroll['philhealth'] = round(($payroll['gross_pay'] * 0.05) / 2, 2);
+    // Deductions (applied on second half payslip)
+    // Pag-IBIG premium: fixed at ₱200.00 regardless of income
+    $payroll['pagibig'] = 200.00;
+
+    // PhilHealth computation:
+    // Formula: Location rate × 393.5 ÷ 12, then × 0.05 ÷ 2
+    // Prefer canonical daily rate from DB (guards_locations.daily_rate), fallback to derived
+    $locationRate = null;
+    try {
+        // Preferred: guards_locations with effective date range columns
+        $rateStmt = $conn->prepare(
+            "SELECT daily_rate 
+             FROM guards_locations 
+             WHERE User_ID = ? 
+               AND (COALESCE(assigned_from, '1900-01-01') <= ?) 
+               AND (COALESCE(assigned_to, '9999-12-31') >= ?) 
+             ORDER BY COALESCE(assigned_from, '1900-01-01') DESC 
+             LIMIT 1"
+        );
+        $rateStmt->execute([$user_id, $endDate, $startDate]);
+        $rateRow = $rateStmt->fetch(PDO::FETCH_ASSOC);
+        if ($rateRow && isset($rateRow['daily_rate']) && is_numeric($rateRow['daily_rate'])) {
+            $locationRate = (float)$rateRow['daily_rate'];
+        }
+        // Fallback: join guard_assignments -> locations to retrieve locations.daily_rate
+        if ($locationRate === null) {
+            $joinStmt = $conn->prepare(
+                "SELECT l.daily_rate 
+                 FROM guard_assignments ga 
+                 JOIN locations l ON l.location_id = ga.location_id 
+                 WHERE ga.User_ID = ? 
+                   AND (COALESCE(ga.assigned_from, '1900-01-01') <= ?) 
+                   AND (COALESCE(ga.assigned_to, '9999-12-31') >= ?) 
+                 ORDER BY COALESCE(ga.assigned_from, '1900-01-01') DESC 
+                 LIMIT 1"
+            );
+            $joinStmt->execute([$user_id, $endDate, $startDate]);
+            $joinRow = $joinStmt->fetch(PDO::FETCH_ASSOC);
+            if ($joinRow && isset($joinRow['daily_rate']) && is_numeric($joinRow['daily_rate'])) {
+                $locationRate = (float)$joinRow['daily_rate'];
+            }
+        }
+    } catch (Throwable $dbRateErr) {
+        // ignore and fallback
+    }
+    if ($locationRate === null) {
+        // Derive location rate from regular pay and hours if not available in DB
+        $regularHours = (float)($payroll['regular_hours'] ?? 0);
+        $regularPay = (float)($payroll['regular_hours_pay'] ?? 0);
+        if ($regularHours > 0) {
+            // Convert hourly back to daily (assume 8 hours/day)
+            $hourlyRate = $regularPay / $regularHours;
+            $locationRate = $hourlyRate * 8.0;
+        } else {
+            $locationRate = 0.0;
+        }
+    }
+    $philhealthBase = ($locationRate * 393.5) / 12.0;
+    $payroll['philhealth'] = round(($philhealthBase * 0.05) / 2.0, 2);
 
     // SSS: determine bracket based on gross pay using table from calculator
     $sssTable = [
@@ -146,7 +204,7 @@ if ($isFullMonth) {
     ];
     $sssContribution = 0;
     foreach ($sssTable as $bracket) {
-        if ($payroll['gross_pay'] >= $bracket['min'] && $payroll['gross_pay'] <= $bracket['max']) {
+        if ($monthlyGross >= $bracket['min'] && $monthlyGross <= $bracket['max']) {
             $sssContribution = $bracket['contribution'];
             break;
         }
@@ -154,10 +212,10 @@ if ($isFullMonth) {
     $payroll['sss'] = $sssContribution;
 
     // Total deductions
-    $payroll['total_deductions'] = $payroll['sss'] + $payroll['philhealth'] + $payroll['pagibig'] + $payroll['cash_advance'] + $payroll['cash_bond'];
-    $payroll['net_pay'] = $payroll['gross_pay'] - $payroll['total_deductions'];
+    $payroll['total_deductions'] = ($payroll['sss'] ?? 0) + ($payroll['philhealth'] ?? 0) + ($payroll['pagibig'] ?? 0) + ($payroll['cash_advance'] ?? 0) + ($payroll['cash_bond'] ?? 0);
+    $payroll['net_pay'] = ($payroll['gross_pay'] ?? 0) - ($payroll['total_deductions'] ?? 0);
 } else {
-    // Single cutoff computation (no deductions displayed)
+    // First half or other custom range: compute without showing deductions
     $payroll = $calculator->calculatePayrollForGuard($user_id, null, null, $startDate, $endDate);
 }
 
@@ -223,7 +281,7 @@ $html = '
                     <tr><td class="label">TOTAL HOURS</td><td class="hrs">' . number_format($payroll['total_hours_worked'] ?? 0, 2) . '</td><td class="value"></td></tr>
                     <tr class="total-row"><td class="label">GROSS PAY</td><td class="hrs"></td><td class="value">₱ ' . number_format($payroll['gross_pay'] ?? 0, 2) . '</td></tr>
                 </table>
-                ' . ($isFullMonth ? '<div class="section-title">II. DEDUCTIONS</div>
+                ' . ($isSecondHalf ? '<div class="section-title">II. DEDUCTIONS</div>
                 <table class="deductions-table">
                     <tr><td class="label">SSS</td><td class="value">₱ ' . number_format($payroll['sss'] ?? 0, 2) . '</td></tr>
                     <tr><td class="label">PHILHEALTH</td><td class="value">₱ ' . number_format($payroll['philhealth'] ?? 0, 2) . '</td></tr>
@@ -232,15 +290,15 @@ $html = '
                     <tr><td class="label">CASH BOND</td><td class="value">₱ ' . number_format($payroll['cash_bond'] ?? 0, 2) . '</td></tr>
                     <tr class="total-row"><td class="label">TOTAL DEDUCTIONS</td><td class="value">₱ ' . number_format($payroll['total_deductions'] ?? 0, 2) . '</td></tr>
                 </table>' : '') . '
-                <div class="netpay-row">NET PAY: ₱ ' . number_format($isFullMonth ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0), 2) . '</div>
+                <div class="netpay-row">NET PAY: ₱ ' . number_format($isSecondHalf ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0), 2) . '</div>
                 <div class="divider"></div>
                 <div class="agency">GREEN MEADOWS SECURITY AGENCY INC.</div>
                 <div class="empname">' . htmlspecialchars($user['name']) . '</div>
                 <table class="summary-table">
                     <tr><td class="label">Period</td><td class="value">' . $period . '</td></tr>
                     <tr><td class="label">Gross</td><td class="value">₱ ' . number_format($payroll['gross_pay'] ?? 0, 2) . '</td></tr>
-                    ' . ($isFullMonth ? '<tr><td class="label">Deductions</td><td class="value">₱ ' . number_format($payroll['total_deductions'] ?? 0, 2) . '</td></tr>' : '') . '
-                    <tr><td class="label big">NET PAY</td><td class="value big">₱ ' . number_format($isFullMonth ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0), 2) . '</td></tr>
+                    ' . ($isSecondHalf ? '<tr><td class="label">Deductions</td><td class="value">₱ ' . number_format($payroll['total_deductions'] ?? 0, 2) . '</td></tr>' : '') . '
+                    <tr><td class="label big">NET PAY</td><td class="value big">₱ ' . number_format($isSecondHalf ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0), 2) . '</td></tr>
                 </table>
             </td></tr>
     </table>

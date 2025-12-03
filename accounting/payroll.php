@@ -34,9 +34,9 @@ $dateRange = isset($_GET['dateRange']) ? $_GET['dateRange'] : '1-15';
 $lastDayOfMonth = date('t', strtotime($month . '-01'));
 
 // Normalize legacy selections (e.g. 16-31 on a 30-day month, or 1-31 on February)
-if (preg_match('/^1-3[01]$/', $dateRange) || preg_match('/^1-2[89]$/', $dateRange) || preg_match('/^1-30$/', $dateRange)) {
+if (preg_match('/^1-3[01]$/', $dateRange) || preg_match('/^1-2[89]$/', $dateRange)) {
     $dateRange = '1-' . $lastDayOfMonth; // Full month normalized
-} elseif (preg_match('/^16-3[01]$/', $dateRange) || preg_match('/^16-2[89]$/', $dateRange) || preg_match('/^16-30$/', $dateRange)) {
+} elseif (preg_match('/^16-3[01]$/', $dateRange) || preg_match('/^16-2[89]$/', $dateRange)) {
     $dateRange = '16-' . $lastDayOfMonth; // Second half normalized
 }
 
@@ -262,11 +262,10 @@ if (empty($startDate) || empty($dateRange)) {
                 </div>
                 <div class="col-md-2">
                     <label for="dateRange" class="form-label">Cutoff Period</label>
-                    <?php $fullLabel = '1-' . $lastDayOfMonth; $secondLabel = '16-' . $lastDayOfMonth; ?>
+                    <?php $secondLabel = '16-' . $lastDayOfMonth; ?>
                     <select class="form-select" id="dateRange" name="dateRange">
                         <option value="1-15" <?php if($dateRange==='1-15') echo 'selected'; ?>>1st - 15th</option>
                         <option value="<?php echo $secondLabel; ?>" <?php if($dateRange===$secondLabel) echo 'selected'; ?>>16th - <?php echo $lastDayOfMonth; ?></option>
-                        <option value="<?php echo $fullLabel; ?>" <?php if($dateRange===$fullLabel) echo 'selected'; ?>>1st - <?php echo $lastDayOfMonth; ?></option>
                     </select>
                 </div>
                 <div class="col-md-3">
