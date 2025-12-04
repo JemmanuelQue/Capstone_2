@@ -193,7 +193,7 @@ if (empty($startDate) || empty($dateRange)) {
             <li class="nav-item">
                 <a href="employee_share.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Employee Share">
                     <span class="material-icons">diversity_3</span>
-                    <span>Employee Share</span>
+                    <span>Employer Contributions</span>
                 </a>
             </li>
             <li class="nav-item mt-5">
@@ -560,7 +560,7 @@ if (empty($startDate) || empty($dateRange)) {
             </a>
             <a href="employee_share.php" class="mobile-nav-item">
                 <span class="material-icons">diversity_3</span>
-                <span class="mobile-nav-text">Employee Share</span>
+                <span class="mobile-nav-text">Employer Contribution</span>
             </a>
             <a href="../logout.php" class="mobile-nav-item">
                 <span class="material-icons">logout</span>

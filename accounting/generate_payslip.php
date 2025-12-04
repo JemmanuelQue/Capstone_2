@@ -6,6 +6,8 @@ require_once __DIR__ . '/payroll_calculation/unified_payroll_calculator.php';
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
+//fixed philhealth.
+
 // Get parameters
 $user_id = $_GET['user_id'] ?? null;
 $month = $_GET['month'] ?? date('Y-m');
@@ -165,7 +167,7 @@ if ($isSecondHalf) {
                 $locationRate = $hourlyRate * 8.0;
             }
         }
-        $philhealthBase = ($locationRate * 393.5) / 12.0;
+        $philhealthBase = ($locationRate * 313) / 12.0;
         $payroll['philhealth'] = round(($philhealthBase * 0.05) / 2.0, 2);
 
         // LATE/UNDERTIME deduction: (daily_rate / shift_hours / 60) * total_late_minutes
