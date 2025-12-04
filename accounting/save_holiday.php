@@ -24,7 +24,7 @@ if (!preg_match("/^\d{4}-\d{2}-\d{2}$/", $holidayDate)) {
     exit;
 }
 
-$validTypes = ['Regular', 'Special Non-Working', 'Special Working'];
+$validTypes = ['Regular', 'Special Non-Working', 'Special Working', 'Legal Holiday'];
 if (!in_array($holidayType, $validTypes)) {
     echo json_encode(['success' => false, 'message' => 'Invalid holiday type']);
     exit;

@@ -387,6 +387,7 @@ $html = '
                     <tr><td class="label">SUN/RD/SPCL. HOL.</td><td class="hrs">' . (int)floor($payroll['special_holiday_hours'] ?? 0) . '</td><td class="value">₱ ' . number_format($payroll['special_holiday_pay'] ?? 0, 2) . '</td></tr>
                     <tr><td class="label">SPCL. HOL. OT</td><td class="hrs">' . (int)floor($payroll['special_holiday_ot_hours'] ?? 0) . '</td><td class="value">₱ ' . number_format($payroll['special_holiday_ot_pay'] ?? 0, 2) . '</td></tr>
                     <tr><td class="label">LEGAL HOLIDAY</td><td class="hrs">' . (int)floor($payroll['legal_holiday_hours'] ?? 0) . '</td><td class="value">₱ ' . number_format($payroll['legal_holiday_pay'] ?? 0, 2) . '</td></tr>
+                    <tr><td class="label">LEGAL HOL. OT</td><td class="hrs">' . (int)floor($payroll['holiday_ot_hours'] ?? 0) . '</td><td class="value">₱ ' . number_format($payroll['holiday_ot_pay'] ?? 0, 2) . '</td></tr>
                     <tr><td class="label">NIGHT DIFF</td><td class="hrs">' . (int)floor($payroll['night_diff_hours'] ?? 0) . '</td><td class="value">₱ ' . number_format($payroll['night_diff_pay'] ?? 0, 2) . '</td></tr>
                     <tr><td class="label">UNIFORM/OTHER ALLOW</td><td class="hrs">0</td><td class="value">₱ ' . number_format($payroll['uniform_allowance'] ?? 0, 2) . '</td></tr>
                     <tr><td class="label">CTP ALLOWANCE</td><td class="hrs">0</td><td class="value">₱ ' . number_format($payroll['ctp_allowance'] ?? 0, 2) . '</td></tr>
@@ -403,7 +404,7 @@ $html = '
                     <tr><td class="label">CASH BOND</td><td class="value">₱ ' . number_format($payroll['cash_bond'] ?? 0, 2) . '</td></tr>
                     <tr class="total-row"><td class="label">TOTAL DEDUCTIONS</td><td class="value">₱ ' . number_format($payroll['total_deductions'] ?? 0, 2) . '</td></tr>
                 </table>') : '') . '
-                <div class="netpay-row">NET PAY: ₱ ' . number_format($isSecondHalf ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0), 2) . '</div>
+                <div class="netpay-row">NET PAY: ₱ ' . number_format(($showDeductions ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0)), 2) . '</div>
                 <div class="divider"></div>
                 <div class="agency">GREEN MEADOWS SECURITY AGENCY INC.</div>
                 <div class="empname">' . htmlspecialchars($user['name']) . '</div>
@@ -411,7 +412,7 @@ $html = '
                     <tr><td class="label">Period</td><td class="value">' . $period . '</td></tr>
                     <tr><td class="label">Gross</td><td class="value">₱ ' . number_format($payroll['gross_pay'] ?? 0, 2) . '</td></tr>
                     ' . ($isSecondHalf && $showDeductions ? '<tr><td class="label">Deductions</td><td class="value">₱ ' . number_format($payroll['total_deductions'] ?? 0, 2) . '</td></tr>' : '') . '
-                    <tr><td class="label big">NET PAY</td><td class="value big">₱ ' . number_format($isSecondHalf ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0), 2) . '</td></tr>
+                    <tr><td class="label big">NET PAY</td><td class="value big">₱ ' . number_format(($showDeductions ? ($payroll['net_pay'] ?? 0) : ($payroll['gross_pay'] ?? 0)), 2) . '</td></tr>
                 </table>
             </td></tr>
     </table>

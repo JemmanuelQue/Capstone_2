@@ -893,3 +893,24 @@ $(document).ready(function() {
     </div>
 </body>
 </html>
+
+<!-- Inject missing Legal Holiday option into add/edit selects -->
+<script>
+    (function ensureLegalHolidayOption(){
+        function addOptionIfMissing(selectId){
+            var el = document.getElementById(selectId);
+            if (!el) return;
+            var exists = Array.from(el.options || []).some(function(opt){ return (opt.value||'') === 'Legal Holiday'; });
+            if (!exists) {
+                var opt = document.createElement('option');
+                opt.value = 'Legal Holiday';
+                opt.textContent = 'Legal Holiday';
+                el.appendChild(opt);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            addOptionIfMissing('add_holidayType');
+            addOptionIfMissing('edit_holidayType');
+        });
+    })();
+</script>

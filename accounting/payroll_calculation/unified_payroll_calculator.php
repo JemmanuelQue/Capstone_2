@@ -207,26 +207,28 @@ class PayrollCalculator {
         // Overtime 4 hours = (Hourly × 1.25) × 4
         // No night differential for day shift segment
 
-        // If there's a holiday, keep existing holiday logic
-        if ($holidayType) {
-            // Fall back to existing detailed calculation for holidays
-            // Compute regular (up to 8h) and OT (up to 4h) by whole hours from 6:00-18:00
-            $shiftStart = new DateTime($date . ' 06:00:00');
-            $regularEnd = new DateTime($date . ' 14:00:00');
-            $shiftEnd = new DateTime($date . ' 18:00:00');
+        // Holiday override: Special Non-Working — fixed multipliers regardless of shift
+        if ($holidayType === 'Special Non-Working') {
+            $dailyRate = $hourlyRate * 8;
+            // Special holiday regular: Daily × 1.30
+            $result['special_holiday_hours'] += 8;
+            $result['special_holiday_pay'] += $dailyRate * 1.30;
+            // Special holiday OT: Hourly × 1.30 (holiday) × 1.30 (holiday OT) × 4 hours
+            $result['special_holiday_ot_hours'] += 4;
+            $result['special_holiday_ot_pay'] += ($hourlyRate * 1.30 * 1.30) * 4;
+            return; // Do not add regular/OT when special holiday applies
+        }
 
-            if ($timeOut > $shiftStart) {
-                $effectiveStart = max($timeIn, $shiftStart);
-                $effectiveEnd = min($timeOut, $regularEnd);
-                if ($timeIn > $shiftStart) { $effectiveStart = new DateTime($date . ' 07:00:00'); }
-                $regularHours = floor(max(0, ($effectiveEnd->getTimestamp() - $effectiveStart->getTimestamp()) / 3600));
-                $this->applyHolidayPay($holidayType, $regularHours, $hourlyRate, $isRestDay, false, $result);
-            }
-            if ($timeOut > $regularEnd) {
-                $otHours = floor(max(0, ($timeOut->getTimestamp() - $regularEnd->getTimestamp()) / 3600));
-                $this->applyHolidayOvertimePay($holidayType, $otHours, $hourlyRate, $isRestDay, false, $result);
-            }
-            return;
+        // Holiday override: Legal Holiday — fixed multipliers regardless of shift
+        if ($holidayType === 'Legal Holiday' || $holidayType === 'Regular') {
+            $dailyRate = $hourlyRate * 8;
+            // Legal holiday regular: Daily × 2.0
+            $result['legal_holiday_hours'] += 8;
+            $result['legal_holiday_pay'] += $dailyRate * 2.0;
+            // Legal holiday OT: Hourly × 2.0 (holiday) × 1.3 (holiday OT) × 4 hours
+            $result['holiday_ot_hours'] += 4;
+            $result['holiday_ot_pay'] += ($hourlyRate * 2.0 * 1.3) * 4;
+            return; // Do not add regular/OT when legal holiday applies
         }
 
         $dailyRate = $hourlyRate * 8;
@@ -257,73 +259,43 @@ class PayrollCalculator {
             error_log("Holiday Type: " . ($holidayType ?: 'None'));
         }
         
-        // Company rule: Straight 12-hour night shift pays
+        // Holiday override: Special Non-Working — fixed multipliers regardless of shift
+        if ($holidayType === 'Special Non-Working') {
+            $dailyRate = $hourlyRate * 8;
+            // Special holiday regular: Daily × 1.30
+            $result['special_holiday_hours'] += 8;
+            $result['special_holiday_pay'] += $dailyRate * 1.30;
+            // Special holiday OT: Hourly × 1.30 (holiday) × 1.30 (holiday OT) × 4 hours
+            $result['special_holiday_ot_hours'] += 4;
+            $result['special_holiday_ot_pay'] += ($hourlyRate * 1.30 * 1.30) * 4;
+            return; // Do not add regular/ND/OT when special holiday applies
+        }
+
+        // Holiday override: Legal Holiday — fixed multipliers regardless of shift
+        if ($holidayType === 'Legal Holiday' || $holidayType === 'Regular') {
+            $dailyRate = $hourlyRate * 8;
+            // Legal holiday regular: Daily × 2.0
+            $result['legal_holiday_hours'] += 8;
+            $result['legal_holiday_pay'] += $dailyRate * 2.0;
+            // Legal holiday OT: Hourly × 2.0 (holiday) × 1.3 (holiday OT) × 4 hours
+            $result['holiday_ot_hours'] += 4;
+            $result['holiday_ot_pay'] += ($hourlyRate * 2.0 * 1.3) * 4;
+            return; // Do not add regular/ND/OT when legal holiday applies
+        }
+
+        // Company rule: Straight 12-hour night shift pays (non-holiday)
         // NS = Daily Rate + (10% of Daily Rate) + 4 hrs OT
-        // OT uses same per-hour rate as morning (Hourly × 1.25), and ND does not stack with OT
-
-        // If there's a holiday, keep existing holiday logic
-        if ($holidayType) {
-            // Fall back to existing holiday computation by segments
-            $shiftStart = new DateTime($date . ' 18:00:00'); // 6:00 PM
-            $ndStart = new DateTime($date . ' 22:00:00'); // 10:00 PM
-            $midnight = new DateTime($date . ' 23:59:59'); $midnight->modify('+1 second');
-            $otStart = clone $midnight; $otStart->modify('+2 hours');
-            $shiftEnd = clone $midnight; $shiftEnd->modify('+6 hours');
-
-            // Regular up to 10 PM
-            if ($timeOut > $shiftStart && $timeIn < $ndStart) {
-                $effectiveStart = max($timeIn, $shiftStart);
-                if ($timeIn > $shiftStart) { $effectiveStart = new DateTime($date . ' 19:00:00'); }
-                $effectiveEnd = min($timeOut, $ndStart);
-                $regHours = floor(max(0, ($effectiveEnd->getTimestamp() - $effectiveStart->getTimestamp()) / 3600));
-                $this->applyHolidayPay($holidayType, $regHours, $hourlyRate, $isRestDay, false, $result);
-            }
-            // ND 10 PM–2 AM
-            if ($timeOut > $ndStart) {
-                $endPoint = min($timeOut, $midnight);
-                $ndHours = floor(max(0, ($endPoint->getTimestamp() - $ndStart->getTimestamp()) / 3600));
-                if ($ndHours > 0) { $this->applyHolidayPay($holidayType, $ndHours, $hourlyRate, $isRestDay, true, $result); }
-            }
-            if ($timeOut > $midnight) {
-                $startPoint = max($timeIn, $midnight); $endPoint = min($timeOut, $otStart);
-                $ndHours = floor(max(0, ($endPoint->getTimestamp() - $startPoint->getTimestamp()) / 3600));
-                if ($ndHours > 0) {
-                    $nextDate = $midnight->format('Y-m-d');
-                    $nextDayOfWeek = (int)(new DateTime($nextDate))->format('N');
-                    $nextDayIsRestDay = ($nextDayOfWeek == 6 || $nextDayOfWeek == 7);
-                    $nextDayHolidayType = $this->getHolidayType($nextDate);
-                    if ($nextDayHolidayType) {
-                        $this->applyHolidayPay($nextDayHolidayType, $ndHours, $hourlyRate, $nextDayIsRestDay, true, $result);
-                    } else {
-                        $this->applyHolidayPay($holidayType, $ndHours, $hourlyRate, $isRestDay, true, $result);
-                    }
-                }
-            }
-            // OT 2–6 AM
-            if ($timeOut > $otStart) {
-                $endPoint = min($timeOut, $shiftEnd);
-                $ndOtHours = floor(max(0, ($endPoint->getTimestamp() - $otStart->getTimestamp()) / 3600));
-                if ($ndOtHours > 0) { $this->applyHolidayOvertimePay($holidayType, $ndOtHours, $hourlyRate, $isRestDay, true, $result); }
-            }
-            return;
-        }
-
         $dailyRate = $hourlyRate * 8;
-        // Regular hours: whole-hour forfeiture if late after 6:00 PM
-        $shiftStart = new DateTime($date . ' 18:00:00');
-        $regularHours = 8;
-        if ($timeIn > $shiftStart) {
-            // Late after 6 PM: forfeit first hour, count 7 regular hours
-            $regularHours = 7;
-        }
-        $result['regular_hours'] += $regularHours;
-        $result['regular_hours_pay'] += $hourlyRate * $regularHours;
+
+        // Regular pay: always 8 hours
+        $result['regular_hours'] += 8;
+        $result['regular_hours_pay'] += $dailyRate;
 
         // Night differential: flat 10% of daily rate (no stacking with OT)
-        $result['night_diff_hours'] += 8; // ND occurs 10:00 PM–6:00 AM (8 hours)
+        $result['night_diff_hours'] += 8; // represent ND segment hours (10pm–6am)
         $result['night_diff_pay'] += $dailyRate * 0.10;
 
-        // OT: 4 hours at 1.25x hourly
+        // OT: fixed 4 hours at 1.25x hourly
         $result['ot_hours'] += 4;
         $result['ot_pay'] += ($hourlyRate * 1.25) * 4;
     }
