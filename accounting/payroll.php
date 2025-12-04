@@ -190,6 +190,12 @@ if (empty($startDate) || empty($dateRange)) {
                     <span>Logs</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="employee_share.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Employee Share">
+                    <span class="material-icons">diversity_3</span>
+                    <span>Employee Share</span>
+                </a>
+            </li>
             <li class="nav-item mt-5">
                 <a href="../logout.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Logout">
                     <span class="material-icons">logout</span>
@@ -551,6 +557,10 @@ if (empty($startDate) || empty($dateRange)) {
             <a href="logs.php" class="mobile-nav-item">
                 <span class="material-icons">receipt_long</span>
                 <span class="mobile-nav-text">Logs</span>
+            </a>
+            <a href="employee_share.php" class="mobile-nav-item">
+                <span class="material-icons">diversity_3</span>
+                <span class="mobile-nav-text">Employee Share</span>
             </a>
             <a href="../logout.php" class="mobile-nav-item">
                 <span class="material-icons">logout</span>

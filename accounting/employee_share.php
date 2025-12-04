@@ -8,6 +8,29 @@ if (!validateSession($conn, 4)) {
     exit();
 }
 
+// Load profile data for header safely
+$profileData = [
+    'First_Name' => $_SESSION['first_name'] ?? ($_SESSION['username'] ?? 'Accounting'),
+    'Last_Name' => $_SESSION['last_name'] ?? '',
+    'Profile_Pic' => '../images/default_profile.png'
+];
+try {
+    if (!empty($_SESSION['user_id'])) {
+        $stmt = $conn->prepare("SELECT Profile_Pic, First_Name, Last_Name FROM users WHERE User_ID = ? LIMIT 1");
+        $stmt->execute([$_SESSION['user_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            if (!empty($row['First_Name'])) { $profileData['First_Name'] = $row['First_Name']; }
+            if (!empty($row['Last_Name'])) { $profileData['Last_Name'] = $row['Last_Name']; }
+            if (!empty($row['Profile_Pic']) && file_exists($row['Profile_Pic'])) {
+                $profileData['Profile_Pic'] = $row['Profile_Pic'];
+            }
+        }
+    }
+} catch (Exception $e) {
+    // Ignore profile load errors and keep defaults
+}
+
 // Utilities
 function sanitizeCurrency($value) {
     $v = preg_replace('/[^0-9.\-]/', '', (string)$value);
@@ -143,20 +166,24 @@ $effectiveDates = loadDistinctEffectiveDates($conn);
             <li class="nav-item"><a href="masterlist.php" class="nav-link" title="Masterlist"><span class="material-icons">assignment</span><span>Masterlist</span></a></li>
             <li class="nav-item"><a href="archives.php" class="nav-link" title="Archives"><span class="material-icons">archive</span><span>Archives</span></a></li>
             <li class="nav-item"><a href="logs.php" class="nav-link" title="Logs"><span class="material-icons">receipt_long</span><span>Logs</span></a></li>
-            <li class="nav-item"><a href="employer_share.php" class="nav-link" title="Employer Contributions"><span class="material-icons">diversity_3</span><span>Employer Contributions</span></a></li>
+            <li class="nav-item"><a href="employee_share.php" class="nav-link active" title="Employee Share"><span class="material-icons">diversity_3</span><span>Employer Contributions</span></a></li>
             <li class="nav-item mt-5"><a href="../logout.php" class="nav-link" title="Logout"><span class="material-icons">logout</span><span>Logout</span></a></li>
         </ul>
     </div>
 
+    <!-- Main Content -->
     <div class="main-content" id="main-content">
+        <!-- Header -->
         <div class="header">
-            <button class="toggle-sidebar" id="toggleSidebar"><span class="material-icons">menu</span></button>
+            <button class="toggle-sidebar" id="toggleSidebar">
+                <span class="material-icons">menu</span>
+            </button>
             <div class="current-datetime ms-3 d-none d-md-block">
                 <span id="current-date"></span> | <span id="current-time"></span>
             </div>
-            <div class="user-profile" id="userProfile">
-                <span><?php echo htmlspecialchars($_SESSION['username'] ?? 'Accounting'); ?></span>
-                <a href="profile.php"><img src="../images/default_profile.png" alt="User Profile"></a>
+            <div class="user-profile" id="userProfile" data-bs-toggle="modal" data-bs-target="#profileModal">
+                <span><?php echo htmlspecialchars(($profileData['First_Name'] ?? 'Accounting') . ' ' . ($profileData['Last_Name'] ?? '')); ?></span>
+                <a href="profile.php"><img src="<?php echo htmlspecialchars($profileData['Profile_Pic'] ?? '../images/default_profile.png'); ?>" alt="User Profile"></a>
             </div>
         </div>
 
@@ -256,7 +283,13 @@ $effectiveDates = loadDistinctEffectiveDates($conn);
                                         <td class="text-center">
                                             <div><?php echo isset($r['msc_regular_ss']) ? number_format($r['msc_regular_ss'], 2) : '—'; ?></div>
                                             <div style="border-top:1px solid #e0e0e0; margin-top:4px; padding-top:4px;">
-                                                <?php echo isset($r['msc_ec']) ? number_format($r['msc_ec'], 2) : '—'; ?>
+                                                <?php
+                                                    if (isset($r['msc_ec'])) {
+                                                        echo ((float)$r['msc_ec'] > 0) ? number_format($r['msc_ec'], 2) : '';
+                                                    } else {
+                                                        echo '—';
+                                                    }
+                                                ?>
                                             </div>
                                         </td>
                                         <td class="text-center"><?php echo isset($r['msc_mpf']) ? number_format($r['msc_mpf'], 2) : '—'; ?></td>
@@ -507,9 +540,9 @@ $effectiveDates = loadDistinctEffectiveDates($conn);
                 <span class="material-icons">receipt_long</span>
                 <span class="mobile-nav-text">Logs</span>
             </a>
-            <a href="employer_share.php" class="mobile-nav-item">
+            <a href="employee_share.php" class="mobile-nav-item active">
                 <span class="material-icons">diversity_3</span>
-                <span class="mobile-nav-text">Employer</span>
+                <span class="mobile-nav-text">Employee Share</span>
             </a>
             <a href="../logout.php" class="mobile-nav-item">
                 <span class="material-icons">logout</span>

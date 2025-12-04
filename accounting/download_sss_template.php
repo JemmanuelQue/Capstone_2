@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 $headers = [
     'range_min','range_max','msc_regular_ss','msc_ec','msc_mpf','msc_total',
@@ -30,19 +31,21 @@ $sheet->setTitle('SSS Template');
 // Header row
 $col = 1;
 foreach ($headers as $h) {
-    $sheet->setCellValueByColumnAndRow($col, 1, $h);
+    $cell = Coordinate::stringFromColumnIndex($col) . '1';
+    $sheet->setCellValue($cell, $h);
     $col++;
 }
 
 // Sample data
-$row = 2;
+$rowIndex = 2;
 foreach ($sampleRows as $r) {
     $col = 1;
     foreach ($r as $val) {
-        $sheet->setCellValueByColumnAndRow($col, $row, $val);
+        $cell = Coordinate::stringFromColumnIndex($col) . $rowIndex;
+        $sheet->setCellValue($cell, $val);
         $col++;
     }
-    $row++;
+    $rowIndex++;
 }
 
 // Style header

@@ -115,6 +115,12 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                     <span>Logs</span>
                 </a>
             </li>
+             <li class="nav-item">
+                <a href="employee_share.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Employee Share">
+                    <span class="material-icons">diversity_3</span>
+                    <span>Employer Contributions</span>
+                </a>
+            </li>
             <li class="nav-item mt-5">
                 <a href="../logout.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Logout">
                     <span class="material-icons">logout</span>
