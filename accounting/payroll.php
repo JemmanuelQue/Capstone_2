@@ -305,6 +305,13 @@ if (empty($startDate) || empty($dateRange)) {
         </div>
     </div>
 
+  <div class="mt-2 mb-3 d-flex justify-content-end">
+    <button id="bulkPrintPayslipBtn" class="btn btn-secondary">
+        <span class="material-icons align-middle me-1" style="font-size:18px;">print</span>
+        Bulk Print Payslip
+    </button>
+  </div>
+
     <!-- Prepare view text but don't show redundant alert -->
     <?php
     function getViewingText($month, $dateRange, $year) {
@@ -579,6 +586,16 @@ if (empty($startDate) || empty($dateRange)) {
                     
                     // Open payslip in new window
                     window.open(`generate_payslip.php?user_id=${userId}&month=${month}&dateRange=${dateRange}`, '_blank');
+                });
+
+                // Bulk Print Payslip button handler
+                $('#bulkPrintPayslipBtn').on('click', function(e) {
+                    e.preventDefault();
+                    // Use current form selections if present; fallback to PHP variables
+                    const monthSel = $('#month').val() || '<?php echo $month; ?>';
+                    const dateRangeSel = $('#dateRange').val() || '<?php echo $dateRange; ?>';
+                    const url = `bulk_print_payslip.php?month=${encodeURIComponent(monthSel)}&dateRange=${encodeURIComponent(dateRangeSel)}`;
+                    window.open(url, '_blank');
                 });
 
                 // Add Cash Advance Input Handler
