@@ -42,7 +42,7 @@ try {
         case 'Hired':
             $statusClass = 'status-hired';
             break;
-        case 'Rejected':
+        case 'Not Qualified':
             $statusClass = 'status-rejected';
             break;
     }

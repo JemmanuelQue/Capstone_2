@@ -34,7 +34,7 @@ if (!$applicantId || !isset($_POST['status'])) {
 $newStatus = trim($_POST['status']);
 
 // Validate status
-$validStatuses = ['New', 'Contacted', 'Interview Scheduled', 'Hired', 'Rejected'];
+$validStatuses = ['New', 'Contacted', 'Interview Scheduled', 'Hired', 'Not Qualified'];
 if (!in_array($newStatus, $validStatuses)) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Invalid status']);

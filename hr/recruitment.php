@@ -481,7 +481,7 @@ try {
                                 <option value="Contacted" <?php echo ($status == 'Contacted') ? 'selected' : ''; ?>>Contacted</option>
                                 <option value="Interview Scheduled" <?php echo ($status == 'Interview Scheduled') ? 'selected' : ''; ?>>Interview Scheduled</option>
                                 <option value="Hired" <?php echo ($status == 'Hired') ? 'selected' : ''; ?>>Hired</option>
-                                <option value="Rejected" <?php echo ($status == 'Rejected') ? 'selected' : ''; ?>>Rejected</option>
+                                <option value="Not Qualified" <?php echo ($status == 'Not Qualified') ? 'selected' : ''; ?>>Not Qualified</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -542,7 +542,7 @@ try {
                                             case 'Hired':
                                                 $statusClass = 'status-hired';
                                                 break;
-                                            case 'Rejected':
+                                            case 'Not Qualified':
                                                 $statusClass = 'status-rejected';
                                                 break;
                                         }
@@ -606,8 +606,8 @@ try {
                                                     <li><a class="dropdown-item update-status" data-id="<?php echo $applicant['Applicant_ID']; ?>" data-status="Hired" href="#">
                                                         <span class="badge status-hired me-2">●</span> Hired
                                                     </a></li>
-                                                    <li><a class="dropdown-item update-status" data-id="<?php echo $applicant['Applicant_ID']; ?>" data-status="Rejected" href="#">
-                                                        <span class="badge status-rejected me-2">●</span> Rejected
+                                                    <li><a class="dropdown-item update-status" data-id="<?php echo $applicant['Applicant_ID']; ?>" data-status="Not Qualified" href="#">
+                                                        <span class="badge status-rejected me-2">●</span> Not Qualified
                                                     </a></li>
                                                 </ul>
                                             </div>

@@ -77,6 +77,12 @@ try {
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/4.0.2/css/fixedColumns.dataTables.min.css">
 </head>
 <body>
+    <style>
+        .table-hscroll { overflow-x: auto; }
+        .table-hscroll::-webkit-scrollbar { height: 12px; }
+        .table-hscroll::-webkit-scrollbar-thumb { background-color: #c5c5c5; border-radius: 6px; }
+        .table-hscroll::-webkit-scrollbar-track { background-color: #f1f1f1; }
+    </style>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="logo-container">
@@ -221,8 +227,9 @@ try {
                 </button>
             </div>
 
-            <div class="table-responsive bg-white rounded p-3 mb-5">
-                <table id="registerTable" class="table table-striped table-bordered">
+            <div class="bg-white rounded p-3 mb-3">
+                <div class="table-responsive table-hscroll">
+                <table id="registerTable" class="table table-striped table-bordered mb-0">
                     <thead>
                         <tr class="table-primary">
                             <th class="align-middle" colspan="2">Employee Information</th>
@@ -264,6 +271,17 @@ try {
                     </thead>
                     <tbody>
                         <?php
+                        // Initialize totals
+                        $tot_regular_hours = 0; $tot_regular_hours_pay = 0; $tot_ot_hours = 0; $tot_ot_pay = 0;
+                        $tot_sun_rd_spcl_hours = 0; $tot_sun_rd_spcl_pay = 0;
+                        $tot_spcl_hol_ot_hours = 0; $tot_spcl_hol_ot_pay = 0;
+                        $tot_legal_hol_hours = 0; $tot_legal_hol_pay = 0;
+                        $tot_legal_hol_ot_hours = 0; $tot_legal_hol_ot_pay = 0;
+                        $tot_nd_hours = 0; $tot_nd_pay = 0;
+                        $tot_uniform_allow = 0; $tot_ctp_allow = 0; $tot_retro = 0;
+                        $tot_gross = 0;
+                        $tot_sss = 0; $tot_philhealth = 0; $tot_pagibig = 0; $tot_late_und = 0;
+                        $tot_cash_advance = 0; $tot_cash_bond = 0; $tot_others = 0; $tot_total_deductions = 0; $tot_net = 0;
                         foreach ($guards as $g) {
                             $p = $calculator->calculatePayroll($g['user_id'], $startDate, $endDate);
                             // Skip rows with no attendance and zero net
@@ -305,10 +323,76 @@ try {
                             echo '<td class="fw-bold">₱ '.number_format((float)($p['total_deductions'] ?? 0), 2).'</td>';
                             echo '<td class="fw-bold">₱ '.number_format((float)$net, 2).'</td>';
                             echo '</tr>';
+
+                            // Accumulate totals
+                            $tot_regular_hours += (float)($p['regular_hours'] ?? 0);
+                            $tot_regular_hours_pay += (float)($p['regular_hours_pay'] ?? 0);
+                            $tot_ot_hours += (float)($p['ot_hours'] ?? 0);
+                            $tot_ot_pay += (float)($p['ot_pay'] ?? 0);
+                            $tot_sun_rd_spcl_hours += (float)($p['special_holiday_hours'] ?? 0);
+                            $tot_sun_rd_spcl_pay += (float)($p['special_holiday_pay'] ?? 0);
+                            $tot_spcl_hol_ot_hours += (float)($p['special_holiday_ot_hours'] ?? 0);
+                            $tot_spcl_hol_ot_pay += (float)($p['special_holiday_ot_pay'] ?? 0);
+                            $tot_legal_hol_hours += (float)($p['legal_holiday_hours'] ?? 0);
+                            $tot_legal_hol_pay += (float)($p['legal_holiday_pay'] ?? 0);
+                            $tot_legal_hol_ot_hours += (float)($p['holiday_ot_hours'] ?? 0);
+                            $tot_legal_hol_ot_pay += (float)($p['holiday_ot_pay'] ?? 0);
+                            $tot_nd_hours += (float)($p['night_diff_hours'] ?? 0);
+                            $tot_nd_pay += (float)($p['night_diff_pay'] ?? 0);
+                            $tot_uniform_allow += (float)($p['uniform_allowance'] ?? 0);
+                            $tot_ctp_allow += (float)($p['ctp_allowance'] ?? 0);
+                            $tot_retro += (float)($p['retroactive_pay'] ?? 0);
+                            $tot_gross += (float)($p['gross_pay'] ?? 0);
+                            $tot_sss += (float)($p['sss'] ?? 0);
+                            $tot_philhealth += (float)($p['philhealth'] ?? 0);
+                            $tot_pagibig += (float)($p['pagibig'] ?? 0);
+                            $tot_late_und += (float)$lateUnd;
+                            $tot_cash_advance += (float)($p['cash_advance'] ?? 0);
+                            $tot_cash_bond += (float)($p['cash_bond'] ?? 0);
+                            $tot_others += (float)($p['other_deductions'] ?? 0);
+                            $tot_total_deductions += (float)($p['total_deductions'] ?? 0);
+                            $tot_net += (float)$net;
                         }
                         ?>
                     </tbody>
+                    <?php
+                    // Render totals in tfoot to keep it at the bottom and exclude from sorting
+                    echo '<tfoot>';
+                    echo '<tr class="table-secondary">';
+                    echo '<td></td>';
+                    echo '<td class="fw-bold">TOTAL</td>';
+                    echo '<td>'.number_format($tot_regular_hours, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_regular_hours_pay, 2).'</td>';
+                    echo '<td>'.number_format($tot_ot_hours, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_ot_pay, 2).'</td>';
+                    echo '<td>'.number_format($tot_sun_rd_spcl_hours, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_sun_rd_spcl_pay, 2).'</td>';
+                    echo '<td>'.number_format($tot_spcl_hol_ot_hours, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_spcl_hol_ot_pay, 2).'</td>';
+                    echo '<td>'.number_format($tot_legal_hol_hours, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_legal_hol_pay, 2).'</td>';
+                    echo '<td>'.number_format($tot_legal_hol_ot_hours, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_legal_hol_ot_pay, 2).'</td>';
+                    echo '<td>'.number_format($tot_nd_hours, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_nd_pay, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_uniform_allow, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_ctp_allow, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_retro, 2).'</td>';
+                    echo '<td class="fw-bold">₱ '.number_format($tot_gross, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_sss, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_philhealth, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_pagibig, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_late_und, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_cash_advance, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_cash_bond, 2).'</td>';
+                    echo '<td>₱ '.number_format($tot_others, 2).'</td>';
+                    echo '<td class="fw-bold">₱ '.number_format($tot_total_deductions, 2).'</td>';
+                    echo '<td class="fw-bold">₱ '.number_format($tot_net, 2).'</td>';
+                    echo '</tr>';
+                    echo '</tfoot>';
+                    ?>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -368,8 +452,6 @@ $(function(){
     var table;
     if ($.fn.dataTable) {
         table = $('#registerTable').DataTable({
-            scrollX: true,
-            scrollCollapse: true,
             paging: true,
             searching: true
         });
