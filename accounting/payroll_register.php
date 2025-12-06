@@ -188,7 +188,6 @@ try {
                     <select class="form-select" name="dateRange">
                         <option value="1-15" <?= $dateRange==='1-15' ? 'selected' : '' ?>>1st - 15th</option>
                         <option value="<?= $secondLabel ?>" <?= $dateRange===$secondLabel ? 'selected' : '' ?>>16th - <?= $lastDayOfMonth ?></option>
-                        <option value="1-<?= $lastDayOfMonth ?>" <?= $dateRange===('1-'.$lastDayOfMonth) ? 'selected' : '' ?>>Full Month</option>
                     </select>
                 </div>
                 <div class="col-md-2 col-6 text-center">
@@ -215,15 +214,11 @@ try {
             </form>
         </div>
 
-            <!-- Actions: Print / Save as PDF -->
+            <!-- Action: Save as Excel -->
             <div class="container-fluid mb-3 d-flex justify-content-end gap-2">
-                <button type="button" id="btnPrint" class="btn btn-secondary d-flex align-items-center">
-                    <span class="material-icons me-1">print</span>
-                    <span>Print</span>
-                </button>
-                <button type="button" id="btnSavePdf" class="btn btn-danger d-flex align-items-center">
-                    <span class="material-icons me-1">picture_as_pdf</span>
-                    <span>Save as PDF</span>
+                <button type="button" id="btnSaveExcel" class="btn btn-success d-flex align-items-center">
+                    <span class="material-icons me-1">table_chart</span>
+                    <span>Save as Excel</span>
                 </button>
             </div>
 
@@ -477,62 +472,16 @@ $(function(){
     updateDateTime();
     setInterval(updateDateTime, 1000);
 
-    var btnPrint = document.getElementById('btnPrint');
-    var btnSavePdf = document.getElementById('btnSavePdf');
-    if (btnPrint) {
-        btnPrint.addEventListener('click', function(){ printRegisterOnly(); });
-    }
-    if (btnSavePdf) {
-        btnSavePdf.addEventListener('click', function(){
+    var btnSaveExcel = document.getElementById('btnSaveExcel');
+    if (btnSaveExcel) {
+        btnSaveExcel.addEventListener('click', function(){
             var params = new URLSearchParams({
                 month: '<?= htmlspecialchars($month) ?>',
                 dateRange: '<?= htmlspecialchars($dateRange) ?>',
                 location: '<?= htmlspecialchars($selectedLocation) ?>'
             }).toString();
-            window.open('export_payroll_register_pdf.php?' + params, '_blank');
+            window.open('export_payroll_register_excel.php?' + params, '_blank');
         });
-    }
-
-    function printRegisterOnly(){
-        var tableEl = document.getElementById('registerTable');
-        if (!tableEl) { window.print(); return; }
-        var iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        document.body.appendChild(iframe);
-
-        var doc = iframe.contentDocument || iframe.contentWindow.document;
-        doc.open();
-        doc.write(`<!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title></title>
-                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-                <style>
-                    @page { size: A4 landscape; margin: 12mm; }
-                    body { font-family: Arial, sans-serif; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border: 1px solid #ccc; padding: 6px; font-size: 12px; }
-                    thead th { background: #f0f6ff; }
-                </style>
-            </head>
-            <body>
-                ${tableEl.outerHTML}
-            </body>
-            </html>`);
-        doc.close();
-
-        iframe.onload = function(){
-            (iframe.contentDocument || iframe.contentWindow.document).title = '';
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-            setTimeout(function(){ document.body.removeChild(iframe); }, 500);
-        };
     }
 });
 </script>
