@@ -161,6 +161,7 @@ $effectiveDates = loadDistinctEffectiveDates($conn);
             <li class="nav-item"><a href="accounting_dashboard.php" class="nav-link" title="Dashboard"><span class="material-icons">dashboard</span><span>Dashboard</span></a></li>
             <li class="nav-item"><a href="daily_time_record.php" class="nav-link" title="Daily Time Record"><span class="material-icons">schedule</span><span>Daily Time Record</span></a></li>
             <li class="nav-item"><a href="payroll.php" class="nav-link" title="Payroll"><span class="material-icons">payments</span><span>Payroll</span></a></li>
+             <li class="nav-item"><a href="payroll_register.php" class="nav-link" title="Payroll"><span class="material-icons">receipt_long</span><span>Payroll Register</span></a></li>
             <li class="nav-item"><a href="rate_locations.php" class="nav-link" title="Rate per Locations"><span class="material-icons">attach_money</span><span>Rate per Locations</span></a></li>
             <li class="nav-item"><a href="calendar.php" class="nav-link" title="Calendar"><span class="material-icons">date_range</span><span>Calendar</span></a></li>
             <li class="nav-item"><a href="masterlist.php" class="nav-link" title="Masterlist"><span class="material-icons">assignment</span><span>Masterlist</span></a></li>

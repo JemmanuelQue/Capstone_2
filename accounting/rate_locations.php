@@ -86,6 +86,12 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                 </a>
             </li>
             <li class="nav-item">
+                <a href="payroll_register.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Payroll Register">
+                    <span class="material-icons">receipt_long</span>
+                    <span>Payroll Register</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="rate_locations.php" class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Users List">
                     <span class="material-icons">attach_money</span>
                     <span>Rate per Locations</span>
@@ -197,6 +203,10 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
             <a href="payroll.php" class="mobile-nav-item active">
                 <span class="material-icons">payments</span>
                 <span class="mobile-nav-text">Payroll</span>
+            </a>
+            <a href="payroll_register.php" class="mobile-nav-item">
+                 <span class="material-icons">receipt_long</span>
+                 <span class="mobile-nav-text">Payroll Register</span>
             </a>
             <!-- FIXED: Add missing links to match sidebar -->
             <a href="rate_locations.php" class="mobile-nav-item">

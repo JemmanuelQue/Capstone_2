@@ -198,6 +198,12 @@ $archivedAttendanceStmt->execute($params);
                 </a>
             </li>
             <li class="nav-item">
+                <a href="payroll_register.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Payroll Register">
+                    <span class="material-icons">receipt_long</span>
+                    <span>Payroll Register</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="rate_locations.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Rate per Locations">
                     <span class="material-icons">attach_money</span>
                     <span>Rate per Locations</span>
