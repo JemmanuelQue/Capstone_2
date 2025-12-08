@@ -125,8 +125,14 @@ for ($year = $currentYear; $year >= $currentYear - 3; $year--) {
                 </a>
             </li>
             <li class="nav-item">
-                <a href="leave_request.php" class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Request Leave">
+                <a href="schedule.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="My Schedule">
                     <span class="material-icons">event_note</span>
+                    <span>My Schedule</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="leave_request.php" class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Request Leave">
+                    <span class="material-icons">event</span>
                     <span>Request Leave</span>
                 </a>
             </li>
