@@ -193,6 +193,12 @@ if (basename($_SERVER['PHP_SELF']) !== 'profile.php') {
                     <span>Daily Time Record</span>
                 </a>
             </li>
+             <li class="nav-item">
+                <a href="tardiness.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Tardiness Report">
+                    <span class="material-icons">timer</span>
+                    <span>Tardiness Report</span>
+                </a>
+            </li>
             <li class="nav-item">
                 <a href="payroll.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Payroll">
                     <span class="material-icons">payments</span>

@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/session_check.php';
 validateSession($conn, 4);
 require_once __DIR__ . '/../db_connection.php';
-require_once __DIR__ . '/payroll_calculation/unified_payroll_calculator.php';
+// No payroll calculator needed for tardiness report
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -27,25 +27,64 @@ if ($dateRange === '1-15') {
     $endDate = date('Y-m-t', strtotime($month));
 }
 
-$calculator = new PayrollCalculator($conn);
+// Build date range
 
 // Optional location filter
 $selectedLocation = isset($_GET['location']) ? $_GET['location'] : '';
 
-// Fetch guards (active) with optional location filter
-$sql = "SELECT u.employee_id, u.user_id, u.first_name, u.middle_name, u.last_name,
-    CONCAT(u.first_name, ' ', CASE WHEN u.middle_name IS NOT NULL AND u.middle_name != '' THEN CONCAT(UPPER(LEFT(u.middle_name,1)), '. ') ELSE '' END, u.last_name) AS name
-    FROM users u JOIN roles r ON u.role_id = r.role_id";
+// Fetch tardiness records within range with optional location filter
+// NOTE: attendance table has no attendance_date/late_minutes/reliever columns.
+//       We derive date from DATE(Time_In), compute late vs scheduled shift, and
+//       mark reliever based on guard_schedules.shift_type.
+$sql = "SELECT 
+            DATE(a.time_in) AS date,
+            u.user_id,
+            CONCAT(u.first_name, ' ', 
+                   CASE WHEN u.middle_name IS NOT NULL AND u.middle_name != '' 
+                        THEN CONCAT(UPPER(LEFT(u.middle_name,1)), '. ') 
+                        ELSE '' END, 
+                   u.last_name) AS name,
+            a.time_in,
+            a.time_out,
+            GREATEST(
+                0,
+                TIMESTAMPDIFF(
+                    MINUTE,
+                    CASE
+                        WHEN TIME(a.time_in) >= '18:00:00' THEN CONCAT(DATE(a.time_in), ' 18:00:00')
+                        WHEN TIME(a.time_in) >= '06:00:00' THEN CONCAT(DATE(a.time_in), ' 06:00:00')
+                        ELSE CONCAT(DATE(DATE_SUB(a.time_in, INTERVAL 1 DAY)), ' 18:00:00')
+                    END,
+                    a.time_in
+                )
+            ) AS late_minutes
+        FROM attendance a
+        JOIN users u ON a.user_id = u.user_id
+        JOIN roles r ON u.role_id = r.role_id
+        ";
 if (!empty($selectedLocation)) {
     $sql .= " JOIN guard_locations gl ON u.user_id = gl.user_id AND gl.location_name = :location_name AND gl.is_active = 1";
 }
-$sql .= " WHERE r.role_name = 'Security Guard' AND u.status = 'Active' ORDER BY u.last_name ASC, u.first_name ASC";
+$sql .= " WHERE r.role_name = 'Security Guard' 
+           AND u.status = 'Active' 
+           AND DATE(a.time_in) BETWEEN :start AND :end
+          ORDER BY DATE(a.time_in) ASC, u.last_name ASC, u.first_name ASC";
 $stmt = $conn->prepare($sql);
 if (!empty($selectedLocation)) {
     $stmt->bindParam(':location_name', $selectedLocation);
 }
+$stmt->bindParam(':start', $startDate);
+$stmt->bindParam(':end', $endDate);
 $stmt->execute();
-$guards = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$tardiness = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Helper: convert minutes to HH:MM
+function minutesToHHMM($minutes) {
+    $minutes = max(0, (int)$minutes);
+    $h = intdiv($minutes, 60);
+    $m = $minutes % 60;
+    return sprintf('%02d:%02d', $h, $m);
+}
 
 // Fetch current accounting user profile and name (from payroll.php pattern)
 $profilePic = '../images/default_profile.png';
@@ -68,7 +107,7 @@ try {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Payroll Register</title>
+    <title>Tardiness Report</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
@@ -104,11 +143,11 @@ try {
                     <span>Daily Time Record</span>
                 </a>
             </li>
-             <li class="nav-item">
-                <a href="tardiness.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Tardiness Report">
-                    <span class="material-icons">timer</span>
-                    <span>Tardiness Report</span>
-                </a>
+            <li class="nav-item">
+                    <a href="tardiness.php" class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Tardiness Report">
+                        <span class="material-icons">timer</span>
+                        <span>Tardiness Report</span>
+                    </a>
             </li>
             <li class="nav-item">
                 <a href="payroll.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Payroll">
@@ -117,7 +156,7 @@ try {
                 </a>
             </li>
             <li class="nav-item">
-                <a href="payroll_register.php" class="nav-link active" data-bs-toggle="tooltip" data-bs-placement="right" title="Payroll Register">
+                <a href="payroll_register.php" class="nav-link" data-bs-toggle="tooltip" data-bs-placement="right" title="Payroll Register">
                     <span class="material-icons">receipt_long</span>
                     <span>Payroll Register</span>
                 </a>
@@ -185,7 +224,7 @@ try {
 
         <div class="container-fluid py-3">
             <div class="d-flex align-items-center justify-content-center mb-3">
-                <h3 class="mb-0 text-center">Payroll Register</h3>
+                <h3 class="mb-0 text-center">Tardiness Report</h3>
             </div>
 
             <div class="container-fluid py-3 bg-white rounded mb-3">
@@ -226,183 +265,82 @@ try {
             </form>
         </div>
 
-            <!-- Action: Save as Excel -->
+            <!-- Action: Export as PDF -->
             <div class="container-fluid mb-3 d-flex justify-content-end gap-2">
-                <button type="button" id="btnSaveExcel" class="btn btn-success d-flex align-items-center">
-                    <span class="material-icons me-1">table_chart</span>
-                    <span>Save as Excel</span>
+                <button type="button" id="btnExportPDF" class="btn btn-danger d-flex align-items-center">
+                    <span class="material-icons me-1">picture_as_pdf</span>
+                    <span>Export as PDF</span>
                 </button>
             </div>
 
             <div class="bg-white rounded p-3 mb-3">
                 <div class="table-responsive table-hscroll">
-                <table id="registerTable" class="table table-striped table-bordered mb-0">
+                <table id="tardinessTable" class="table table-striped table-bordered mb-0">
                     <thead>
                         <tr class="table-primary">
-                            <th class="align-middle" colspan="2">Employee Information</th>
-                            <th class="text-center align-middle bg-success text-white" colspan="18">Earnings</th>
-                            <th class="text-center align-middle bg-danger text-white" colspan="8">Deductions</th>
-                            <th class="text-center align-middle" colspan="1">Summary</th>
-                        </tr>
-                        <tr>
-                            <th>Employee ID</th>
-                            <th>Employee Name</th>
-                            <th>Regular Hours</th>
-                            <th>Regular Pay</th>
-                            <th>Regular OT Hours</th>
-                            <th>Regular OT Pay</th>
-                            <th>Sun/RD/SPCL Hol Hours</th>
-                            <th>Sun/RD/SPCL Hol Pay</th>
-                            <th>Special Holiday OT Hours</th>
-                            <th>Special Holiday OT Pay</th>
-                            <th>Legal Holiday Hours</th>
-                            <th>Legal Holiday Pay</th>
-                            <th>Legal Holiday OT Hours</th>
-                            <th>Legal Holiday OT Pay</th>
-                            <th>Night Differential Hours</th>
-                            <th>Night Differential Pay</th>
-                            <th>Uniform/Other Allowance</th>
-                            <th>CTP Allowance</th>
-                            <th>Retroactive</th>
-                            <th>Gross Pay</th>
-                            <th>SSS</th>
-                            <th>PhilHealth</th>
-                            <th>Pag-IBIG</th>
-                            <th>Late / Undertime</th>
-                            <th>Cash Advance</th>
-                            <th>Cash Bond</th>
-                            <th>Others</th>
-                            <th>Total Deductions</th>
-                            <th>Net Pay</th>
+                            <th>Date</th>
+                            <th>Name</th>
+                            <th>Time In</th>
+                            <th>Time Out</th>
+                            <th>Late (HH:MM)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        // Initialize totals
-                        $tot_regular_hours = 0; $tot_regular_hours_pay = 0; $tot_ot_hours = 0; $tot_ot_pay = 0;
-                        $tot_sun_rd_spcl_hours = 0; $tot_sun_rd_spcl_pay = 0;
-                        $tot_spcl_hol_ot_hours = 0; $tot_spcl_hol_ot_pay = 0;
-                        $tot_legal_hol_hours = 0; $tot_legal_hol_pay = 0;
-                        $tot_legal_hol_ot_hours = 0; $tot_legal_hol_ot_pay = 0;
-                        $tot_nd_hours = 0; $tot_nd_pay = 0;
-                        $tot_uniform_allow = 0; $tot_ctp_allow = 0; $tot_retro = 0;
-                        $tot_gross = 0;
-                        $tot_sss = 0; $tot_philhealth = 0; $tot_pagibig = 0; $tot_late_und = 0;
-                        $tot_cash_advance = 0; $tot_cash_bond = 0; $tot_others = 0; $tot_total_deductions = 0; $tot_net = 0;
-                        foreach ($guards as $g) {
-                            $p = $calculator->calculatePayroll($g['user_id'], $startDate, $endDate);
-                            // Skip rows with no attendance and zero net
-                            $totalHours = 0.0;
-                            foreach (['regular_hours','ot_hours','night_diff_hours','legal_holiday_hours','holiday_ot_hours','special_holiday_hours','special_holiday_ot_hours'] as $hk) {
-                                if (isset($p[$hk])) { $totalHours += (float)$p[$hk]; }
-                            }
-                            $net = isset($p['net_pay']) ? (float)$p['net_pay'] : ((float)($p['gross_pay'] ?? 0) - (float)($p['total_deductions'] ?? 0));
-                            if ($totalHours <= 0 && $net <= 0) { continue; }
+                        $totalLate = 0;
+                        foreach ($tardiness as $row) {
+                            $lateMin = (int)($row['late_minutes'] ?? 0);
+                            $totalLate += $lateMin;
                             echo '<tr>';
-                            echo '<td>'.htmlspecialchars($g['employee_id'] ?? '').'</td>';
-                            echo '<td>'.htmlspecialchars($g['name']).'</td>';
-                            echo '<td>'.number_format((float)($p['regular_hours'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['regular_hours_pay'] ?? 0), 2).'</td>';
-                            echo '<td>'.number_format((float)($p['ot_hours'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['ot_pay'] ?? 0), 2).'</td>';
-                            echo '<td>'.number_format((float)($p['special_holiday_hours'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['special_holiday_pay'] ?? 0), 2).'</td>';
-                            echo '<td>'.number_format((float)($p['special_holiday_ot_hours'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['special_holiday_ot_pay'] ?? 0), 2).'</td>';
-                            echo '<td>'.number_format((float)($p['legal_holiday_hours'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['legal_holiday_pay'] ?? 0), 2).'</td>';
-                            echo '<td>'.number_format((float)($p['holiday_ot_hours'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['holiday_ot_pay'] ?? 0), 2).'</td>';
-                            echo '<td>'.number_format((float)($p['night_diff_hours'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['night_diff_pay'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['uniform_allowance'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['ctp_allowance'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['retroactive_pay'] ?? 0), 2).'</td>';
-                            echo '<td class="fw-bold">₱ '.number_format((float)($p['gross_pay'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['sss'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['philhealth'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['pagibig'] ?? 0), 2).'</td>';
-                            $lateUnd = isset($p['late_undertime_deduction']) ? $p['late_undertime_deduction'] : ($p['late_undertime'] ?? 0);
-                            echo '<td>₱ '.number_format((float)$lateUnd, 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['cash_advance'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['cash_bond'] ?? 0), 2).'</td>';
-                            echo '<td>₱ '.number_format((float)($p['other_deductions'] ?? 0), 2).'</td>';
-                            echo '<td class="fw-bold">₱ '.number_format((float)($p['total_deductions'] ?? 0), 2).'</td>';
-                            echo '<td class="fw-bold">₱ '.number_format((float)$net, 2).'</td>';
+                            echo '<td>'.htmlspecialchars(date('M d, Y', strtotime($row['date']))).'</td>';
+                            echo '<td>'.htmlspecialchars($row['name']).'</td>';
+                            echo '<td>'.htmlspecialchars($row['time_in'] ?? '').'</td>';
+                            echo '<td>'.htmlspecialchars($row['time_out'] ?? '').'</td>';
+                            echo '<td title="'.htmlspecialchars($lateMin).' min">'.htmlspecialchars(minutesToHHMM($lateMin)).'</td>';
                             echo '</tr>';
-
-                            // Accumulate totals
-                            $tot_regular_hours += (float)($p['regular_hours'] ?? 0);
-                            $tot_regular_hours_pay += (float)($p['regular_hours_pay'] ?? 0);
-                            $tot_ot_hours += (float)($p['ot_hours'] ?? 0);
-                            $tot_ot_pay += (float)($p['ot_pay'] ?? 0);
-                            $tot_sun_rd_spcl_hours += (float)($p['special_holiday_hours'] ?? 0);
-                            $tot_sun_rd_spcl_pay += (float)($p['special_holiday_pay'] ?? 0);
-                            $tot_spcl_hol_ot_hours += (float)($p['special_holiday_ot_hours'] ?? 0);
-                            $tot_spcl_hol_ot_pay += (float)($p['special_holiday_ot_pay'] ?? 0);
-                            $tot_legal_hol_hours += (float)($p['legal_holiday_hours'] ?? 0);
-                            $tot_legal_hol_pay += (float)($p['legal_holiday_pay'] ?? 0);
-                            $tot_legal_hol_ot_hours += (float)($p['holiday_ot_hours'] ?? 0);
-                            $tot_legal_hol_ot_pay += (float)($p['holiday_ot_pay'] ?? 0);
-                            $tot_nd_hours += (float)($p['night_diff_hours'] ?? 0);
-                            $tot_nd_pay += (float)($p['night_diff_pay'] ?? 0);
-                            $tot_uniform_allow += (float)($p['uniform_allowance'] ?? 0);
-                            $tot_ctp_allow += (float)($p['ctp_allowance'] ?? 0);
-                            $tot_retro += (float)($p['retroactive_pay'] ?? 0);
-                            $tot_gross += (float)($p['gross_pay'] ?? 0);
-                            $tot_sss += (float)($p['sss'] ?? 0);
-                            $tot_philhealth += (float)($p['philhealth'] ?? 0);
-                            $tot_pagibig += (float)($p['pagibig'] ?? 0);
-                            $tot_late_und += (float)$lateUnd;
-                            $tot_cash_advance += (float)($p['cash_advance'] ?? 0);
-                            $tot_cash_bond += (float)($p['cash_bond'] ?? 0);
-                            $tot_others += (float)($p['other_deductions'] ?? 0);
-                            $tot_total_deductions += (float)($p['total_deductions'] ?? 0);
-                            $tot_net += (float)$net;
                         }
                         ?>
                     </tbody>
-                    <?php
-                    // Render totals in tfoot to keep it at the bottom and exclude from sorting
-                    echo '<tfoot>';
-                    echo '<tr class="table-secondary">';
-                    echo '<td></td>';
-                    echo '<td class="fw-bold">TOTAL</td>';
-                    echo '<td>'.number_format($tot_regular_hours, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_regular_hours_pay, 2).'</td>';
-                    echo '<td>'.number_format($tot_ot_hours, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_ot_pay, 2).'</td>';
-                    echo '<td>'.number_format($tot_sun_rd_spcl_hours, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_sun_rd_spcl_pay, 2).'</td>';
-                    echo '<td>'.number_format($tot_spcl_hol_ot_hours, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_spcl_hol_ot_pay, 2).'</td>';
-                    echo '<td>'.number_format($tot_legal_hol_hours, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_legal_hol_pay, 2).'</td>';
-                    echo '<td>'.number_format($tot_legal_hol_ot_hours, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_legal_hol_ot_pay, 2).'</td>';
-                    echo '<td>'.number_format($tot_nd_hours, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_nd_pay, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_uniform_allow, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_ctp_allow, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_retro, 2).'</td>';
-                    echo '<td class="fw-bold">₱ '.number_format($tot_gross, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_sss, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_philhealth, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_pagibig, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_late_und, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_cash_advance, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_cash_bond, 2).'</td>';
-                    echo '<td>₱ '.number_format($tot_others, 2).'</td>';
-                    echo '<td class="fw-bold">₱ '.number_format($tot_total_deductions, 2).'</td>';
-                    echo '<td class="fw-bold">₱ '.number_format($tot_net, 2).'</td>';
-                    echo '</tr>';
-                    echo '</tfoot>';
-                    ?>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <td colspan="4" class="fw-bold text-end">TOTAL LATE (HH:MM)</td>
+                            <td class="fw-bold" title="<?php echo htmlspecialchars($totalLate); ?> min"><?php echo htmlspecialchars(minutesToHHMM($totalLate)); ?></td>
+                        </tr>
+                    </tfoot>
                 </table>
                 </div>
             </div>
         </div>
     </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Live date/time
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('current-date').textContent = now.toLocaleDateString();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        // Sidebar toggle
+        document.getElementById('toggleSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.getElementById('main-content').classList.toggle('expanded');
+        });
+
+        // Export as PDF
+        document.getElementById('btnExportPDF').addEventListener('click', function() {
+            const params = new URLSearchParams({
+                month: document.querySelector('input[name="month"]').value,
+                dateRange: document.querySelector('select[name="dateRange"]').value,
+                location: document.querySelector('select[name="location"]').value
+            });
+            window.open('export_tardiness_pdf.php?' + params.toString(), '_blank');
+        });
+    </script>
 
     <!-- Mobile Bottom Navigation -->
     <div class="mobile-nav">
