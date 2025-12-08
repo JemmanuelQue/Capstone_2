@@ -4,6 +4,53 @@ require_once __DIR__ . '/../includes/session_check.php';
 require_once '../db_connection.php';
 if (!validateSession($conn, 5)) { exit; }
 
+// Redirect guards without a schedule back to dashboard (UX guardrail)
+try {
+    $userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+    if ($userId) {
+        // If there is an active (open) attendance, allow access to enable time-out
+        $openStmt = $conn->prepare("SELECT ID, Time_In FROM attendance WHERE User_ID = ? AND Time_Out IS NULL ORDER BY Time_In DESC LIMIT 1");
+        $openStmt->execute([$userId]);
+        $openAttendance = $openStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$openAttendance) {
+            // Compute schedule date anchor: before 06:00 => previous day; else today
+            $now = new DateTime('now');
+            $timeStr = $now->format('H:i:s');
+            if ($timeStr < '06:00:00') {
+                $now->modify('-1 day');
+            }
+            $schedDate = $now->format('Y-m-d');
+
+            // Check if a schedule exists for the anchored date
+            $schedStmt = $conn->prepare("SELECT 1 FROM guard_schedules WHERE user_id = ? AND schedule_date = ? LIMIT 1");
+            $schedStmt->execute([$userId, $schedDate]);
+            if ($schedStmt->fetchColumn() === false) {
+                // No schedule today; show message and redirect after 5 seconds
+                $redirectUrl = 'guards_dashboard.php?alert=no_schedule&date=' . urlencode($schedDate);
+                echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">'
+                    . '<title>No Schedule</title>'
+                    . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">'
+                    . '<style>body{background:linear-gradient(135deg,#256845 0%,#1b3c2b 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Poppins,Arial,sans-serif}.'
+                    . 'card{max-width:560px} .countdown{font-weight:700}</style>'
+                    . '</head><body>'
+                    . '<div class="card shadow-lg p-4 rounded-4">'
+                    . '<h4 class="mb-2 text-danger">No schedule found</h4>'
+                    . '<p class="mb-1 text-dark">You do not have a schedule for <strong>' . htmlspecialchars($schedDate) . '</strong>.</p>'
+                    . '<p class="mb-3 text-dark">Redirecting to the dashboard in <span class="countdown" id="cd">5</span> seconds…</p>'
+                    . '<div><a class="btn btn-success" href="' . htmlspecialchars($redirectUrl) . '">Go to Dashboard now</a></div>'
+                    . '</div>'
+                    . '<script>(function(){var s=5;var el=document.getElementById("cd");var t=setInterval(function(){s--;if(el) el.textContent=s; if(s<=0){clearInterval(t);window.location.href="' . $redirectUrl . '";}},1000);})();</script>'
+                    . '</body></html>';
+                exit;
+            }
+        }
+    }
+} catch (Exception $e) {
+    // On any error during check, fail open (allow page) but log server error
+    error_log('Attendance schedule precheck error: ' . $e->getMessage());
+}
+
 // Get guard details, face profile, and location information
 $stmt = $conn->prepare("
     SELECT u.*, gf.profile_image, gl.location_name, gl.designated_latitude, gl.designated_longitude
