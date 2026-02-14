@@ -21,10 +21,10 @@ services:
       MYSQL_ROOT_PASSWORD: root_password 
       
       # The "App User" you want to create
-      MYSQL_USER: meadows_user
-      MYSQL_PASSWORD: meadows_password
+      MYSQL_USER: Aljur
+      MYSQL_PASSWORD: 10312025
       
-      # The database this user will have access to
+      # The database this use will have access to
       MYSQL_DATABASE: green_meadows_db
     networks:
       - my-app-net

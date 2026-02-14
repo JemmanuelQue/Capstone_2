@@ -1,5 +1,10 @@
 FROM php:8.2-apache
 
+RUN apt-get update && apt-get install -y \
+    vim \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Enable Apache modules
 RUN a2enmod rewrite
 
