@@ -2,10 +2,10 @@
 // Set timezone to Philippine time
 date_default_timezone_set('Asia/Manila');
 
-$host = "localhost";
+$host = "db";
 $dbname = "green_meadows_db";
-$username = "root";
-$password = "";
+$username = "Aljur";
+$password = "10312025";
 
 try {
     // Create a PDO instance

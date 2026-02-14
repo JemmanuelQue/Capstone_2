@@ -1,0 +1,40 @@
+services:
+  # The Web Server
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: green-meadows-apache
+    ports:
+      - "8081:80"
+    networks:
+      - my-app-net
+    depends_on:
+      - db
+
+  # The Database
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      # The "Superuser" (still required)
+      MYSQL_ROOT_PASSWORD: root_password 
+      
+      # The "App User" you want to create
+      MYSQL_USER: meadows_user
+      MYSQL_PASSWORD: meadows_password
+      
+      # The database this user will have access to
+      MYSQL_DATABASE: green_meadows_db
+    networks:
+      - my-app-net
+    # Optional: Persist data so it doesn't vanish when the container stops
+    volumes:
+      - db_data:/var/lib/mysql
+
+networks:
+  my-app-net:
+    driver: bridge
+
+volumes:
+  db_data:
