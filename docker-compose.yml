@@ -26,7 +26,7 @@ services:
       
       # The database this use will have access to
       MYSQL_DATABASE: green_meadows_db
-    command: -ssl=0
+    command: --ssl=0
     networks:
       - my-app-net
     # Optional: Persist data so it doesn't vanish when the container stops
